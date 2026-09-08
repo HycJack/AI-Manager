@@ -1,7 +1,20 @@
 import { useEffect, useState } from "react";
-import { Monitor, Moon, Sun, Palette, Settings2, Info } from "lucide-react";
+import {
+  Monitor,
+  Moon,
+  Sun,
+  Palette,
+  Settings2,
+  Info,
+  FolderOpen,
+  Folder,
+  RefreshCw,
+  Languages,
+  ExternalLink,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { usePreferencesStore } from "@/modules/settings/store";
+import { useI18n } from "@/modules/i18n";
 import { useTheme, listBuiltinThemes, type ThemeColors } from "@/modules/theme";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -9,10 +22,18 @@ import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "@/lib/toast";
 import { GetInfo } from "@bindings/ai-manager/internal/app/versionservice";
 import { CheckForUpdates, CheckAndInstall, Restart, UpdateState } from "@bindings/ai-manager/internal/app/updateservice";
 import { IsEnabled as IsAutostartEnabled, SetEnabled as SetAutostartEnabled } from "@bindings/ai-manager/internal/app/autostartservice";
+import { GetConfig, UpdateConfig, BrowseLibrary, RescanLibrary } from "@bindings/ai-manager/internal/app/configservice";
 
 // Built from the upstream projects this template abstracts. Opens in the
 // browser via the OS default handler — passed to window.open as a plain link.
@@ -34,19 +55,15 @@ function isDevBuild(v: string): boolean {
   return v === "" || v === "dev" || v === "unknown";
 }
 
-const MODES: { id: "system" | "light" | "dark"; label: string; icon: typeof Sun }[] = [
-  { id: "system", label: "System", icon: Monitor },
-  { id: "light", label: "Light", icon: Sun },
-  { id: "dark", label: "Dark", icon: Moon },
-];
-
 export default function SettingsPage() {
+  const { t } = useI18n();
+
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">设置</h1>
+        <h1 className="text-2xl font-bold">{t("settings.title")}</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          外观、主题与应用偏好（参考 terax-clone 的 General + Themes 配置）。
+          {t("settings.subtitle")}
         </p>
       </div>
 
@@ -54,15 +71,19 @@ export default function SettingsPage() {
         <TabsList className="w-full">
           <TabsTrigger value="general" className="flex-1 gap-1.5">
             <Settings2 className="h-4 w-4" />
-            通用
+            {t("settings.tab.general")}
           </TabsTrigger>
           <TabsTrigger value="themes" className="flex-1 gap-1.5">
             <Palette className="h-4 w-4" />
-            主题
+            {t("settings.tab.themes")}
+          </TabsTrigger>
+          <TabsTrigger value="library" className="flex-1 gap-1.5">
+            <Folder className="h-4 w-4" />
+            {t("settings.tab.library")}
           </TabsTrigger>
           <TabsTrigger value="about" className="flex-1 gap-1.5">
             <Info className="h-4 w-4" />
-            关于
+            {t("settings.tab.about")}
           </TabsTrigger>
         </TabsList>
 
@@ -71,6 +92,9 @@ export default function SettingsPage() {
         </TabsContent>
         <TabsContent value="themes" className="mt-6">
           <ThemesSection />
+        </TabsContent>
+        <TabsContent value="library" className="mt-6">
+          <LibrarySection />
         </TabsContent>
         <TabsContent value="about" className="mt-6">
           <AboutSection />
@@ -82,14 +106,31 @@ export default function SettingsPage() {
 
 // ---------- General ----------
 
+const MODES: { id: "system" | "light" | "dark"; labelKey: string; icon: typeof Sun }[] = [
+  { id: "system", labelKey: "settings.mode.system", icon: Monitor },
+  { id: "light", labelKey: "settings.mode.light", icon: Sun },
+  { id: "dark", labelKey: "settings.mode.dark", icon: Moon },
+];
+
 function GeneralSection() {
   const { mode, setMode } = useTheme();
+  const { lang, setLang, t } = useI18n();
+  const language = usePreferencesStore((s) => s.language);
+  const setLanguage = usePreferencesStore((s) => s.setLanguage);
   const zoomLevel = usePreferencesStore((s) => s.zoomLevel);
   const setZoomLevel = usePreferencesStore((s) => s.setZoomLevel);
   const showHidden = usePreferencesStore((s) => s.showHidden);
   const setShowHidden = usePreferencesStore((s) => s.setShowHidden);
   const launchAtLogin = usePreferencesStore((s) => s.launchAtLogin);
   const setLaunchAtLogin = usePreferencesStore((s) => s.setLaunchAtLogin);
+
+  // Sync the i18n language with the settings store on mount.
+  useEffect(() => {
+    if (lang !== language) {
+      setLang(language);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Sync the preferences toggle with the actual platform registration
   // on first mount (the stored pref may be stale if the user removed the
@@ -107,7 +148,7 @@ function GeneralSection() {
     <div className="space-y-6">
       {/* Appearance mode */}
       <section className="space-y-3">
-        <Label>外观模式</Label>
+        <Label>{t("settings.appearance")}</Label>
         <div className="grid grid-cols-3 gap-2">
           {MODES.map((o) => (
             <Button
@@ -117,12 +158,41 @@ function GeneralSection() {
               className="h-16 flex-col gap-1.5"
             >
               <o.icon className="h-5 w-5" />
-              <span className="text-xs">{o.label}</span>
+              <span className="text-xs">{t(o.labelKey)}</span>
             </Button>
           ))}
         </div>
         <p className="text-xs text-muted-foreground">
-          主题颜色与背景在「主题」页切换。
+          {t("settings.appearance.hint")}
+        </p>
+      </section>
+
+      <Separator />
+
+      {/* Language */}
+      <section className="space-y-3">
+        <Label>{t("settings.language")}</Label>
+        <Select
+          value={lang}
+          onValueChange={(v) => {
+            setLang(v as "en" | "zh");
+            setLanguage(v as "en" | "zh");
+            toast(
+              t("toast.languageChanged", { lang: v === "en" ? "English" : "中文" }),
+            );
+          }}
+        >
+          <SelectTrigger className="w-full">
+            <Languages className="h-4 w-4 mr-2 text-muted-foreground" />
+            <SelectValue placeholder={t("settings.language")} />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="en">English</SelectItem>
+            <SelectItem value="zh">中文</SelectItem>
+          </SelectContent>
+        </Select>
+        <p className="text-xs text-muted-foreground">
+          {t("settings.language.hint")}
         </p>
       </section>
 
@@ -131,7 +201,7 @@ function GeneralSection() {
       {/* Zoom */}
       <section className="space-y-3">
         <div className="flex items-center justify-between">
-          <Label>界面缩放</Label>
+          <Label>{t("settings.zoom")}</Label>
           <span className="text-sm tabular-nums text-muted-foreground">
             {Math.round(zoomLevel * 100)}%
           </span>
@@ -149,15 +219,12 @@ function GeneralSection() {
 
       {/* File browser */}
       <section className="space-y-3">
-        <Label>文件浏览器</Label>
+        <Label>{t("settings.fileBrowser")}</Label>
         <SettingRow
-          title="显示隐藏文件"
-          description="在文件列表与搜索中显示点开头的文件（.env、.gitignore 等）。"
+          title={t("settings.showHidden")}
+          description={t("settings.showHidden.desc")}
         >
-          <Switch
-            checked={showHidden}
-            onCheckedChange={setShowHidden}
-          />
+          <Switch checked={showHidden} onCheckedChange={setShowHidden} />
         </SettingRow>
       </section>
 
@@ -165,10 +232,10 @@ function GeneralSection() {
 
       {/* Startup */}
       <section className="space-y-3">
-        <Label>启动</Label>
+        <Label>{t("settings.startup")}</Label>
         <SettingRow
-          title="开机自启"
-          description="登录系统时自动打开应用。"
+          title={t("settings.launchAtLogin")}
+          description={t("settings.launchAtLogin.desc")}
         >
           <Switch
             checked={launchAtLogin}
@@ -176,10 +243,10 @@ function GeneralSection() {
               setLaunchAtLogin(v);
               try {
                 await SetAutostartEnabled(v);
-                toast(v ? "已设置开机自启" : "已关闭开机自启");
+                toast(t(v ? "toast.autostartOn" : "toast.autostartOff"));
               } catch (e) {
-                setLaunchAtLogin(!v); // revert on failure
-                toast(`设置失败: ${e}`, true);
+                setLaunchAtLogin(!v);
+                toast(t("toast.autostartFailed", { error: String(e) }), true);
               }
             }}
           />
@@ -193,34 +260,36 @@ function GeneralSection() {
 
 function ThemesSection() {
   const { themeId, setThemeId, resolvedMode } = useTheme();
+  const { t } = useI18n();
   const themes = listBuiltinThemes();
 
   return (
     <div className="space-y-3">
-      <Label>主题</Label>
+      <Label>{t("settings.themes.title")}</Label>
       <p className="text-xs text-muted-foreground">
-        点击选择主题并立即应用。当前模式：{resolvedMode === "dark" ? "深色" : "浅色"}。
+        {t("settings.themes.hint")}
+        {" "}{t("settings.themes.currentMode", { mode: resolvedMode === "dark" ? "深色" : "浅色" })}
       </p>
       <div className="grid grid-cols-2 gap-2">
-        {themes.map((t) => {
+        {themes.map((th) => {
           const variant =
-            t.variants[resolvedMode] ?? t.variants.dark ?? t.variants.light;
+            th.variants[resolvedMode] ?? th.variants.dark ?? th.variants.light;
           const c: ThemeColors | undefined = variant?.colors;
           const swatchBg = c?.background ?? "var(--background)";
           const swatchFg = c?.foreground ?? "var(--foreground)";
           const swatchAccent = c?.primary ?? c?.accent ?? "var(--primary)";
           const swatchMuted = c?.muted ?? "var(--muted)";
-          const selected = themeId === t.id;
+          const selected = themeId === th.id;
           return (
             <button
-              key={t.id}
+              key={th.id}
               type="button"
-              onClick={() => setThemeId(t.id)}
+              onClick={() => setThemeId(th.id)}
               className={cn(
                 "group flex items-center gap-3 rounded-lg border p-2.5 text-left transition-all",
                 selected
                   ? "border-primary ring-1 ring-primary/30"
-                  : "border-border hover:border-primary/50"
+                  : "border-border hover:border-primary/50",
               )}
             >
               <div
@@ -232,10 +301,10 @@ function ThemesSection() {
                 <span className="h-6 w-0 flex-1 rounded-sm" style={{ background: swatchMuted }} />
               </div>
               <div className="flex min-w-0 flex-1 flex-col">
-                <span className="truncate text-[12.5px] font-medium">{t.name}</span>
-                {t.description ? (
+                <span className="truncate text-[12.5px] font-medium">{th.name}</span>
+                {th.description ? (
                   <span className="truncate text-[11px] text-muted-foreground">
-                    {t.description}
+                    {th.description}
                   </span>
                 ) : null}
               </div>
@@ -247,9 +316,119 @@ function ThemesSection() {
   );
 }
 
+// ---------- Library ----------
+
+function LibrarySection() {
+  const { t } = useI18n();
+  const [libraryDir, setLibraryDir] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [scanning, setScanning] = useState(false);
+  const [skillCount, setSkillCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    GetConfig()
+      .then((cfg) => setLibraryDir(cfg.libraryDir || ""))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  const onBrowse = async () => {
+    try {
+      const path = await BrowseLibrary();
+      if (path) {
+        setLibraryDir(path);
+        await UpdateConfig({ libraryDir: path });
+        toast(t("toast.libraryChanged"));
+      }
+    } catch (e) {
+      toast(`Browse failed: ${e}`, true);
+    }
+  };
+
+  const onOpenFolder = () => {
+    if (!libraryDir) return;
+    // Use the browser to open the folder — on desktop this works via the OS
+    // file protocol. As a fallback, the path is displayed for manual copying.
+    window.open(libraryDir, "_blank");
+  };
+
+  const onRescan = async () => {
+    setScanning(true);
+    try {
+      const count = await RescanLibrary();
+      setSkillCount(count);
+      toast(t("toast.libraryScanComplete"));
+    } catch (e) {
+      toast(t("toast.libraryScanFailed", { error: String(e) }), true);
+    } finally {
+      setScanning(false);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <section className="space-y-3">
+        <Label>{t("settings.library.title")}</Label>
+
+        {loading ? (
+          <div className="rounded-lg bg-card px-3 py-2.5 text-sm text-muted-foreground">
+            加载中…
+          </div>
+        ) : (
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 rounded-lg bg-card px-3 py-2.5">
+              <Folder className="h-4 w-4 shrink-0 text-muted-foreground" />
+              <span className="flex-1 truncate font-mono text-sm">
+                {libraryDir || t("settings.library.notConfigured")}
+              </span>
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={onBrowse}>
+                <FolderOpen className="h-3.5 w-3.5 mr-1.5" />
+                {t("settings.library.browse")}
+              </Button>
+              {libraryDir && (
+                <Button variant="outline" size="sm" onClick={onOpenFolder}>
+                  <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
+                  {t("settings.library.open")}
+                </Button>
+              )}
+              <Button variant="outline" size="sm" onClick={onRescan} disabled={scanning}>
+                <RefreshCw className={cn("h-3.5 w-3.5 mr-1.5", scanning && "animate-spin")} />
+                {t("settings.library.rescan")}
+              </Button>
+            </div>
+          </div>
+        )}
+
+        <p className="text-xs text-muted-foreground">
+          {t("settings.library.path.hint")}
+        </p>
+
+        {skillCount !== null && (
+          <div className="rounded-lg border border-border/60 bg-card/60 px-3 py-2.5">
+            <span className="text-sm text-muted-foreground">
+              发现 {skillCount} 个技能
+            </span>
+          </div>
+        )}
+      </section>
+
+      <Separator />
+
+      <section className="space-y-3">
+        <p className="text-xs text-muted-foreground">
+          {t("settings.library.rescan.hint")}
+        </p>
+      </section>
+    </div>
+  );
+}
+
 // ---------- About ----------
 
 function AboutSection() {
+  const { t } = useI18n();
   const [version, setVersion] = useState("");
   const [commit, setCommit] = useState("…");
   const [buildTime, setBuildTime] = useState("…");
@@ -281,14 +460,12 @@ function AboutSection() {
       if (rel) {
         setHasUpdate(true);
         setUpdateVersion(rel.version || "");
-        toast(`发现新版本 ${rel.version}`);
+        toast(`${t("settings.about.updateAvailable")} ${rel.version}`);
       } else {
         setHasUpdate(false);
-        toast("已是最新版本");
+        toast(t("settings.about.upToDate"));
       }
     } catch {
-      // Dev builds (no update repo configured) reject the check; surface that
-      // as a hint rather than a scary error toast.
       setHasUpdate(false);
       toast("此构建未配置更新源", false);
     } finally {
@@ -337,13 +514,13 @@ function AboutSection() {
 
       {/* Build info */}
       <section className="space-y-3">
-        <Label>构建信息</Label>
+        <Label>{t("settings.about.title")}</Label>
         <dl className="grid grid-cols-[110px_1fr] gap-y-2.5 text-[12.5px]">
-          <dt className="text-muted-foreground">版本</dt>
+          <dt className="text-muted-foreground">{t("settings.about.version")}</dt>
           <dd className="font-mono">{version}</dd>
-          <dt className="text-muted-foreground">提交</dt>
+          <dt className="text-muted-foreground">{t("settings.about.commit")}</dt>
           <dd className="truncate font-mono text-[11.5px]">{commit}</dd>
-          <dt className="text-muted-foreground">构建时间</dt>
+          <dt className="text-muted-foreground">{t("settings.about.buildTime")}</dt>
           <dd className="font-mono text-[11.5px]">{buildTime}</dd>
         </dl>
       </section>
@@ -377,13 +554,13 @@ function AboutSection() {
 
       {/* Updates */}
       <section className="space-y-3">
-        <Label>更新</Label>
+        <Label>{t("settings.about.updates")}</Label>
         {devBuild ? (
           <p className="text-xs text-muted-foreground">
             当前为开发构建，自动更新未启用。发布构建（带版本号）后即可检查更新。
           </p>
         ) : checked && !hasUpdate && updateState !== "ready" ? (
-          <p className="text-xs text-muted-foreground">已是最新版本。</p>
+          <p className="text-xs text-muted-foreground">{t("settings.about.upToDate")}</p>
         ) : (
           <p className="text-xs text-muted-foreground">
             当前状态：{updateState}
@@ -397,16 +574,16 @@ function AboutSection() {
               onClick={onCheck}
               disabled={checking}
             >
-              {checking ? "检查中…" : "检查更新"}
+              {checking ? t("settings.about.checking") : t("settings.about.checkForUpdates")}
             </Button>
             {hasUpdate && (
               <Button size="sm" onClick={onInstall}>
-                下载并安装 {updateVersion}
+                {t("settings.about.installUpdate")} {updateVersion}
               </Button>
             )}
             {updateState === "ready" && (
               <Button size="sm" onClick={onRestart}>
-                重启以完成更新
+                {t("settings.about.restartToUpdate")}
               </Button>
             )}
           </div>
