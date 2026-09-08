@@ -25,13 +25,13 @@ func TestInstallSkill_CreatesSymlink(t *testing.T) {
 	}
 
 	// Install the skill
-	err := InstallSkill(libSkillDir, projDir, agents.TargetClaude)
+	err := InstallSkill(libSkillDir, projDir, agents.TargetClaudeCode)
 	if err != nil {
 		t.Fatalf("InstallSkill() returned error: %v", err)
 	}
 
 	// Verify symlink exists
-	linkPath := filepath.Join(projDir, ".claude", "skills", "test-skill")
+	linkPath := filepath.Join(projDir, ".claude-code", "skills", "test-skill")
 	info, err := os.Lstat(linkPath)
 	if err != nil {
 		t.Fatalf("Lstat() returned error: %v", err)
@@ -53,11 +53,11 @@ func TestInstallSkill_AlreadyInstalled(t *testing.T) {
 	}
 
 	// Install twice
-	err := InstallSkill(libSkillDir, projDir, agents.TargetClaude)
+	err := InstallSkill(libSkillDir, projDir, agents.TargetClaudeCode)
 	if err != nil {
 		t.Fatalf("First install: %v", err)
 	}
-	err = InstallSkill(libSkillDir, projDir, agents.TargetClaude)
+	err = InstallSkill(libSkillDir, projDir, agents.TargetClaudeCode)
 	if err != nil {
 		t.Fatalf("Second install (should be no-op): %v", err)
 	}
@@ -74,7 +74,7 @@ func TestInstallSkill_SharesTarget(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err := InstallSkill(libSkillDir, projDir, agents.TargetShared)
+	err := InstallSkill(libSkillDir, projDir, agents.TargetUniversal)
 	if err != nil {
 		t.Fatalf("InstallSkill() returned error: %v", err)
 	}
@@ -97,18 +97,18 @@ func TestUninstallSkill_RemovesSymlink(t *testing.T) {
 	}
 
 	// Install
-	if err := InstallSkill(libSkillDir, projDir, agents.TargetClaude); err != nil {
+	if err := InstallSkill(libSkillDir, projDir, agents.TargetClaudeCode); err != nil {
 		t.Fatal(err)
 	}
 
 	// Uninstall
-	err := UninstallSkill(projDir, "test-skill", agents.TargetClaude)
+	err := UninstallSkill(projDir, "test-skill", agents.TargetClaudeCode)
 	if err != nil {
 		t.Fatalf("UninstallSkill() returned error: %v", err)
 	}
 
 	// Verify symlink removed
-	linkPath := filepath.Join(projDir, ".claude", "skills", "test-skill")
+	linkPath := filepath.Join(projDir, ".claude-code", "skills", "test-skill")
 	if _, err := os.Lstat(linkPath); !os.IsNotExist(err) {
 		t.Errorf("Symlink still exists after uninstall")
 	}
@@ -122,7 +122,7 @@ func TestUninstallSkill_AlreadyUninstalled(t *testing.T) {
 	}
 
 	// Should be no-op
-	err := UninstallSkill(projDir, "nonexistent", agents.TargetClaude)
+	err := UninstallSkill(projDir, "nonexistent", agents.TargetClaudeCode)
 	if err != nil {
 		t.Fatalf("UninstallSkill() on missing: %v", err)
 	}
@@ -132,12 +132,12 @@ func TestUninstallSkill_RefusesRealDir(t *testing.T) {
 	tmp := t.TempDir()
 	projDir := filepath.Join(tmp, "proj")
 	// Create a real directory (not a symlink)
-	realDir := filepath.Join(projDir, ".claude", "skills", "real-dir")
+	realDir := filepath.Join(projDir, ".claude-code", "skills", "real-dir")
 	if err := os.MkdirAll(realDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
 
-	err := UninstallSkill(projDir, "real-dir", agents.TargetClaude)
+	err := UninstallSkill(projDir, "real-dir", agents.TargetClaudeCode)
 	if err == nil {
 		t.Error("UninstallSkill() should refuse to delete non-symlink directory")
 	}
@@ -168,7 +168,7 @@ func TestScanProject_FindsInstallations(t *testing.T) {
 	}
 
 	// Install two skills
-	if err := InstallSkill(libSkillDir, projDir, agents.TargetClaude); err != nil {
+	if err := InstallSkill(libSkillDir, projDir, agents.TargetClaudeCode); err != nil {
 		t.Fatal(err)
 	}
 	if err := InstallSkill(libSkillDir, projDir, agents.TargetCodex); err != nil {
@@ -191,7 +191,7 @@ func TestScanProject_FindsInstallations(t *testing.T) {
 		}
 		found[inst.Target] = true
 	}
-	if !found[agents.TargetClaude] || !found[agents.TargetCodex] {
+	if !found[agents.TargetClaudeCode] || !found[agents.TargetCodex] {
 		t.Errorf("ScanProject() targets = %v, want claude + codex", found)
 	}
 }

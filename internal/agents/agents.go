@@ -12,24 +12,24 @@ import (
 type AgentKind string
 
 const (
-	AgentClaude      AgentKind = "claude"
+	AgentUniversal   AgentKind = "universal"
+	AgentClaudeCode  AgentKind = "claude-code"
 	AgentCodex       AgentKind = "codex"
 	AgentCursor      AgentKind = "cursor"
-	AgentCline       AgentKind = "cline"
-	AgentContinue    AgentKind = "continue"
-	AgentAider       AgentKind = "aider"
+	AgentOpenCode    AgentKind = "opencode"
+	AgentPi          AgentKind = "pi"
+	AgentGrok        AgentKind = "grok"
 	AgentAntigravity AgentKind = "antigravity"
-	AgentTrae        AgentKind = "trae"
-	AgentWindsurf    AgentKind = "windsurf"
-	AgentGeneric     AgentKind = "generic"
+	AgentDroid       AgentKind = "droid"
+	AgentCopilot     AgentKind = "copilot"
 )
 
-// AllAgentKinds returns all defined agent kinds.
+// AllAgentKinds returns all defined agent kinds in display order.
 func AllAgentKinds() []AgentKind {
 	return []AgentKind{
-		AgentClaude, AgentCodex, AgentCursor, AgentCline,
-		AgentContinue, AgentAider, AgentAntigravity, AgentTrae,
-		AgentWindsurf, AgentGeneric,
+		AgentUniversal, AgentClaudeCode, AgentCodex, AgentCursor,
+		AgentOpenCode, AgentPi, AgentGrok, AgentAntigravity,
+		AgentDroid, AgentCopilot,
 	}
 }
 
@@ -37,39 +37,40 @@ func AllAgentKinds() []AgentKind {
 type InstallTarget string
 
 const (
-	TargetShared       InstallTarget = "shared"
-	TargetClaude       InstallTarget = "claude"
-	TargetCodex        InstallTarget = "codex"
-	TargetCursor       InstallTarget = "cursor"
-	TargetCline        InstallTarget = "cline"
-	TargetContinue     InstallTarget = "continue"
-	TargetAider        InstallTarget = "aider"
-	TargetAntigravity  InstallTarget = "antigravity"
-	TargetTrae         InstallTarget = "trae"
-	TargetWindsurf     InstallTarget = "windsurf"
+	TargetUniversal   InstallTarget = "universal"
+	TargetClaudeCode  InstallTarget = "claude-code"
+	TargetCodex       InstallTarget = "codex"
+	TargetCursor      InstallTarget = "cursor"
+	TargetOpenCode    InstallTarget = "opencode"
+	TargetPi          InstallTarget = "pi"
+	TargetGrok        InstallTarget = "grok"
+	TargetAntigravity InstallTarget = "antigravity"
+	TargetDroid       InstallTarget = "droid"
+	TargetCopilot     InstallTarget = "copilot"
 )
 
 // AllTargets returns all defined install targets.
 func AllTargets() []InstallTarget {
 	return []InstallTarget{
-		TargetShared, TargetClaude, TargetCodex, TargetCursor,
-		TargetCline, TargetContinue, TargetAider, TargetAntigravity,
-		TargetTrae, TargetWindsurf,
+		TargetUniversal, TargetClaudeCode, TargetCodex, TargetCursor,
+		TargetOpenCode, TargetPi, TargetGrok, TargetAntigravity,
+		TargetDroid, TargetCopilot,
 	}
 }
 
-// AgentDir returns the directory name for an agent (e.g. ".claude" for "claude").
+// AgentDir returns the directory name for an agent.
+// Universal uses ".agents"; all others use ".<agent-name>".
 func AgentDir(agent AgentKind) string {
-	if agent == "" || agent == AgentGeneric {
+	if agent == AgentUniversal {
 		return ".agents"
 	}
 	return "." + string(agent)
 }
 
 // TargetDir returns the full directory path for a given target within a project.
-// Shared target uses .agents/skills; agent-specific targets use .<agent>/skills.
+// Universal target uses .agents/skills; agent-specific targets use .<agent>/skills.
 func TargetDir(projectPath string, target InstallTarget) string {
-	if target == TargetShared {
+	if target == TargetUniversal {
 		return filepath.Join(projectPath, ".agents", "skills")
 	}
 	dir := "." + string(target)
@@ -78,14 +79,11 @@ func TargetDir(projectPath string, target InstallTarget) string {
 
 // TargetAgent maps an InstallTarget to its corresponding AgentKind.
 func TargetAgent(target InstallTarget) AgentKind {
-	if target == TargetShared {
-		return AgentGeneric
-	}
 	return AgentKind(target)
 }
 
 // AgentDirs scans a project directory for all agent-specific directories that exist.
-// Returns the list of InstallTargets found (both shared and agent-specific).
+// Returns the list of InstallTargets found (both universal and agent-specific).
 func AgentDirs(projectPath string) []InstallTarget {
 	found := make([]InstallTarget, 0, len(AllTargets()))
 
@@ -129,7 +127,6 @@ func DiscoverSkills(projectPath string) []DiscoveredSkill {
 			}
 			skillPath := filepath.Join(dir, entry.Name())
 
-			// Check for SKILL.md or README.md
 			hasManifest := false
 			for _, name := range []string{"SKILL.md", "README.md"} {
 				if _, err := os.Stat(filepath.Join(skillPath, name)); err == nil {
@@ -148,7 +145,6 @@ func DiscoverSkills(projectPath string) []DiscoveredSkill {
 				Path:   skillPath,
 			}
 
-			// Try to read version from metadata.json
 			metaPath := filepath.Join(skillPath, "metadata.json")
 			if data, err := os.ReadFile(metaPath); err == nil {
 				var meta struct {

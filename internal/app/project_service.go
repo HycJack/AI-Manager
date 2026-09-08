@@ -48,7 +48,7 @@ func (s *ProjectService) InstallSkills(names []string, projectPath string, targe
 	}
 
 	if global {
-		targets = []agents.InstallTarget{agents.TargetShared}
+		targets = []agents.InstallTarget{agents.TargetUniversal}
 	}
 
 	for _, name := range names {

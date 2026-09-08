@@ -30,16 +30,16 @@ import type { Summary } from "@bindings/ai-manager/internal/skill/models";
 // ---------------------------------------------------------------------------
 
 const ALL_TARGETS: { value: string; label: string }[] = [
-  { value: "shared", label: "Shared" },
-  { value: "claude", label: "Claude" },
+  { value: "universal", label: "Universal" },
+  { value: "claude-code", label: "Claude Code" },
   { value: "codex", label: "Codex" },
   { value: "cursor", label: "Cursor" },
-  { value: "cline", label: "Cline" },
-  { value: "continue", label: "Continue" },
-  { value: "aider", label: "Aider" },
+  { value: "opencode", label: "OpenCode" },
+  { value: "pi", label: "Pi" },
+  { value: "grok", label: "Grok" },
   { value: "antigravity", label: "Antigravity" },
-  { value: "trae", label: "Trae" },
-  { value: "windsurf", label: "Windsurf" },
+  { value: "droid", label: "Droid" },
+  { value: "copilot", label: "Copilot" },
 ];
 
 // ---------------------------------------------------------------------------
@@ -70,7 +70,7 @@ export function SkillInstallDialog({
   const [location, setLocation] = useState<"project" | "global">("project");
   const [projectPath, setProjectPath] = useState("");
   const [selectedTargets, setSelectedTargets] = useState<Set<string>>(
-    new Set(["shared"]),
+    new Set(["universal"]),
   );
   const [installing, setInstalling] = useState(false);
   const [picking, setPicking] = useState(false);

@@ -28,6 +28,12 @@ jobs:
         with:
           go-version: ${{ env.GO_VERSION }}
 
+      - name: Install wails3 CLI
+        run: go install github.com/wailsapp/wails/v3/cmd/wails3@latest
+
+      - name: Add wails3 to PATH
+        run: echo "$HOME/go/bin" >> "$GITHUB_PATH"
+
       - name: Install frontend deps
         run: cd frontend && npm ci
 
@@ -72,6 +78,12 @@ jobs:
         with:
           go-version: ${{ env.GO_VERSION }}
 
+      - name: Install wails3 CLI
+        run: go install github.com/wailsapp/wails/v3/cmd/wails3@latest
+
+      - name: Add wails3 to PATH
+        run: echo "$HOME/go/bin" >> "$GITHUB_PATH"
+
       - name: Install frontend deps
         run: cd frontend && npm ci
 
@@ -112,6 +124,12 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
+
+      - name: Install wails3 CLI
+        run: go install github.com/wailsapp/wails/v3/cmd/wails3@latest
+
+      - name: Add wails3 to PATH
+        run: echo "$HOME/go/bin" >> "$GITHUB_PATH"
 
       - name: Install frontend deps
         run: cd frontend && npm ci

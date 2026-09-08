@@ -27,19 +27,20 @@ import {
 import type { EffectiveSkill } from "@bindings/ai-manager/internal/effective/models";
 import type { Project } from "@bindings/ai-manager/internal/project/models";
 
-type AgentKind = "claude" | "codex" | "cursor" | "cline" | "continue" | "aider" | "antigravity" | "trae" | "windsurf" | "generic";
+type AgentKind = "universal" | "claude-code" | "codex" | "cursor" | "opencode" | "pi" | "grok" | "antigravity" | "droid" | "copilot";
 
 // All agents to display in the grid
 const AGENTS: { key: AgentKind; label: string }[] = [
-  { key: "claude", label: "Claude" },
+  { key: "claude-code", label: "Claude Code" },
   { key: "codex", label: "Codex" },
   { key: "cursor", label: "Cursor" },
-  { key: "cline", label: "Cline" },
-  { key: "continue", label: "Continue" },
-  { key: "aider", label: "Aider" },
+  { key: "opencode", label: "OpenCode" },
+  { key: "pi", label: "Pi" },
+  { key: "grok", label: "Grok" },
   { key: "antigravity", label: "Antigravity" },
-  { key: "trae", label: "Trae" },
-  { key: "windsurf", label: "Windsurf" },
+  { key: "droid", label: "Droid" },
+  { key: "copilot", label: "Copilot" },
+  { key: "universal", label: "Universal" },
 ];
 
 interface AgentRow {

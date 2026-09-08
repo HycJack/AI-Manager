@@ -4,7 +4,7 @@
 
 A desktop application for managing Agent Skills across projects: one maintained library, each project gets only what it needs, updates propagate through managed links.
 
-参考实现：[Kitter](https://github.com/kitter-app/kitter)（Rust/gpui）→ 复刻为 Go + React 版本。
+参考实现：[Kitter](https://github.com/what1f/kitter)（Rust/gpui）→ 复刻为 Go + React 版本。
 
 ## Features
 

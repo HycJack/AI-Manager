@@ -10,8 +10,9 @@ import (
 
 // Tag represents a single user-assigned label.
 type Tag struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
+	ID       string `json:"id"`
+	Name     string `json:"name"`
+	ParentID string `json:"parentId,omitempty"`
 }
 
 // State represents a two-level tag tree (parent -> children).
@@ -24,8 +25,16 @@ type State struct {
 
 // Document is the full tag data persisted to tags.json.
 type Document struct {
-	Skills   State `json:"skills"`
-	Projects State `json:"projects"`
+	Skills   State        `json:"skills"`
+	Projects State        `json:"projects"`
+	Groups   []GroupEntry `json:"groups,omitempty"`
+}
+
+// GroupEntry is a named collection of skills.
+type GroupEntry struct {
+	ID     string   `json:"id"`
+	Name   string   `json:"name"`
+	Skills []string `json:"skills"`
 }
 
 // NewState returns an initialized State with empty tags and assignments.

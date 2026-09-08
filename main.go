@@ -57,6 +57,9 @@ func main() {
 			application.NewService(app.NewProjectService(state)),
 			// Config access (data dir, library dir, folder picker).
 			application.NewService(app.NewConfigService(state)),
+			// Tag and group management: two-level tag tree, group CRUD,
+			// skill↔tag assignment, persisted to tags.json.
+			application.NewService(app.NewTagGroupService(state)),
 		},
 		// Single instance: a second launch brings the existing window to the
 		// front instead of starting a new process.

@@ -56,7 +56,7 @@ func GetEffectiveSkills(projectPath string) []EffectiveSkill {
 	targets := agents.AgentDirs(projectPath)
 
 	// Also add shared directory
-	targets = append(targets, agents.TargetShared)
+	targets = append(targets, agents.TargetUniversal)
 
 	// Scan each agent directory
 	type discoveredSkill struct {
