@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Home, Settings, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { Home, Settings, FolderTree, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import type { Layout, LayoutChangedMeta } from "react-resizable-panels";
 import { cn } from "@/lib/utils";
 import { useToasts } from "@/lib/toast";
@@ -18,9 +18,11 @@ import { useSidebarPanel, SIDEBAR_COLLAPSED_WIDTH } from "@/modules/sidebar";
 import { usePreferencesStore } from "@/modules/settings/store";
 import HomePage from "@/pages/HomePage";
 import SettingsPage from "@/pages/SettingsPage";
+import ProjectsPage from "@/pages/ProjectsPage";
 
 const NAV = [
   { key: "home", label: "首页", icon: Home },
+  { key: "projects", label: "项目", icon: FolderTree },
 ] as const;
 
 type TabKey = (typeof NAV)[number]["key"] | "settings";
@@ -96,12 +98,12 @@ export default function App() {
                 {/* Primary nav icons stay at the top, right after the expand
                     toggle — matching the expanded layout where nav is topmost. */}
                 <div className="flex flex-col items-center gap-1">
-                  {NAV.map(({ key, icon: Icon }) => (
+                  {NAV.map(({ key, label, icon: Icon }) => (
                     <IconButton
                       key={key}
                       active={tab === key}
                       icon={Icon}
-                      label="首页"
+                      label={label}
                       onClick={() => select(key)}
                     />
                   ))}
@@ -199,7 +201,7 @@ export default function App() {
                     : "100%",
               }}
             >
-              {tab === "home" ? <HomePage /> : <SettingsPage />}
+              {tab === "home" ? <HomePage /> : tab === "projects" ? <ProjectsPage /> : <SettingsPage />}
             </main>
           </div>
         </ResizablePanel>
