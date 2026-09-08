@@ -50,6 +50,11 @@ func main() {
 			application.NewService(app.NewAutostartService(state)),
 			// Recursive file search with directory / file-type filtering.
 			application.NewService(app.NewSearchService(state)),
+			// Skill library: list, add, remove, check updates for agent skills.
+			application.NewService(app.NewSkillService(state)),
+			// Project management: install/uninstall skills, list projects,
+			// scan effective skills per agent.
+			application.NewService(app.NewProjectService(state)),
 		},
 		// Single instance: a second launch brings the existing window to the
 		// front instead of starting a new process.

@@ -6,6 +6,10 @@
 // @ts-ignore: Unused imports
 import { Create as $Create } from "@wailsio/runtime";
 
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
+import * as skill$0 from "../skill/models.js";
+
 /**
  * Preferences is the typed shape persisted to disk and exposed to the frontend
  * via the Wails3 bindings. Adding a field here + in DEFAULT_PREFERENCES is the
@@ -187,5 +191,105 @@ export class SearchResult {
     }
 }
 
+/**
+ * SkillDetail is the full detail returned by GetSkill, including the
+ * underlying record, file list, and readme content.
+ */
+export class SkillDetail {
+    /**
+     * Creates a new SkillDetail instance.
+     * @param {Partial<SkillDetail>} [$$source = {}] - The source object to create the SkillDetail.
+     */
+    constructor($$source = {}) {
+        if (!("record" in $$source)) {
+            /**
+             * @member
+             * @type {skill$0.Record}
+             */
+            this["record"] = (new skill$0.Record());
+        }
+        if (!("files" in $$source)) {
+            /**
+             * @member
+             * @type {string[]}
+             */
+            this["files"] = [];
+        }
+        if (!("readme" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["readme"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new SkillDetail instance from a string or object.
+     * @param {any} [$$source = {}]
+     * @returns {SkillDetail}
+     */
+    static createFrom($$source = {}) {
+        const $$createField0_0 = $$createType1;
+        const $$createField1_0 = $$createType0;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("record" in $$parsedSource) {
+            $$parsedSource["record"] = $$createField0_0($$parsedSource["record"]);
+        }
+        if ("files" in $$parsedSource) {
+            $$parsedSource["files"] = $$createField1_0($$parsedSource["files"]);
+        }
+        return new SkillDetail(/** @type {Partial<SkillDetail>} */($$parsedSource));
+    }
+}
+
+/**
+ * UpdateInfo describes a skill update check result.
+ */
+export class UpdateInfo {
+    /**
+     * Creates a new UpdateInfo instance.
+     * @param {Partial<UpdateInfo>} [$$source = {}] - The source object to create the UpdateInfo.
+     */
+    constructor($$source = {}) {
+        if (!("name" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["name"] = "";
+        }
+        if (!("current" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["current"] = "";
+        }
+        if (!("latest" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["latest"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new UpdateInfo instance from a string or object.
+     * @param {any} [$$source = {}]
+     * @returns {UpdateInfo}
+     */
+    static createFrom($$source = {}) {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new UpdateInfo(/** @type {Partial<UpdateInfo>} */($$parsedSource));
+    }
+}
+
 // Private type creation functions
 const $$createType0 = $Create.Array($Create.Any);
+const $$createType1 = skill$0.Record.createFrom;

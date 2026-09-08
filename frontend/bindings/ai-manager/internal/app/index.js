@@ -6,6 +6,7 @@ import * as AutostartService from "./autostartservice.js";
 import * as GreeterService from "./greeterservice.js";
 import * as SearchService from "./searchservice.js";
 import * as SettingsService from "./settingsservice.js";
+import * as SkillService from "./skillservice.js";
 import * as UpdateService from "./updateservice.js";
 import * as VersionService from "./versionservice.js";
 export {
@@ -13,6 +14,7 @@ export {
     GreeterService,
     SearchService,
     SettingsService,
+    SkillService,
     UpdateService,
     VersionService
 };
@@ -20,5 +22,7 @@ export {
 export {
     Preferences,
     SearchOptions,
-    SearchResult
+    SearchResult,
+    SkillDetail,
+    UpdateInfo
 } from "./models.js";
