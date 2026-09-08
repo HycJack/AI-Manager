@@ -1,0 +1,171 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
+
+env:
+  GO_VERSION: '1.27'
+  NODE_VERSION: '20'
+
+jobs:
+  # ── macOS (universal) ──────────────────────────────────
+  macos:
+    name: macOS (universal)
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Install frontend deps
+        run: cd frontend && npm ci
+
+      - name: Generate bindings
+        run: wails3 generate bindings
+
+      - name: Build
+        run: wails3 build
+
+      - name: Package (DMG)
+        run: wails3 package -platform darwin -arch universal
+        continue-on-error: true
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-manager-macos
+          path: bin/*.app
+
+      - name: Upload DMG
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-manager-macos-dmg
+          path: bin/*.dmg
+          if-no-files-found: ignore
+
+  # ── Windows ────────────────────────────────────────────
+  windows:
+    name: Windows
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Install frontend deps
+        run: cd frontend && npm ci
+
+      - name: Generate bindings
+        run: wails3 generate bindings
+
+      - name: Build
+        run: wails3 build
+
+      - name: Package (NSIS)
+        run: wails3 package -platform windows
+        continue-on-error: true
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-manager-windows
+          path: bin/*.exe
+
+  # ── Linux ──────────────────────────────────────────────
+  linux:
+    name: Linux
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc libgl1-mesa-dev libxkbcommon-dev
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Install frontend deps
+        run: cd frontend && npm ci
+
+      - name: Generate bindings
+        run: wails3 generate bindings
+
+      - name: Build
+        run: wails3 build
+
+      - name: Package (AppImage)
+        run: wails3 package -platform linux
+        continue-on-error: true
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-manager-linux
+          path: bin/ai-manager
+
+  # ── GitHub Release on tag ──────────────────────────────
+  release:
+    name: GitHub Release
+    needs: [macos, windows, linux]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+
+      - name: List files
+        run: find dist -type f -ls
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/**/*
+          draft: true
+          body: |
+            ## AI-Manager v${{ github.ref_name }}
+
+            Cross-platform Agent Skills manager.
+
+            ### Installation
+            - **macOS**: Open the .dmg and drag to Applications
+            - **Windows**: Run the .exe installer
+            - **Linux**: Run the AppImage directly, or install to /usr/local/bin
+
+            ### Notes
+            - First run may require creating the data directory manually:
+              - macOS: `mkdir -p ~/Library/Application\ Support/AIManager`
+              - Windows: `%APPDATA%/AIManager/` (created automatically)
+              - Linux: `~/.local/share/AIManager/` (created automatically)
