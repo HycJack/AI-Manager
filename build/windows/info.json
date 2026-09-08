@@ -1,0 +1,15 @@
+{
+	"fixed": {
+		"file_version": "0.1.0"
+	},
+	"info": {
+		"0000": {
+			"ProductVersion": "0.1.0",
+			"CompanyName": "Your Company",
+			"FileDescription": "A Wails3 skeleton application",
+			"LegalCopyright": "© 2026, Your Company",
+			"ProductName": "Wails3 Skeleton",
+			"Comments": "Generated from the Wails3 skeleton template"
+		}
+	}
+}
