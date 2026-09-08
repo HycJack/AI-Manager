@@ -36,3 +36,8 @@ node_modules/
 
 # Build artifacts
 frontend/dist/
+
+# Build artifacts
+bin/
+.task/
+*.DS_Store
