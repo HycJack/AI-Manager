@@ -22,6 +22,8 @@ type Preferences struct {
 	ShowHidden bool `json:"showHidden"`
 	// Open automatically at login.
 	LaunchAtLogin bool `json:"launchAtLogin"`
+	// UI language: "en" or "zh".
+	Language string `json:"language"`
 }
 
 // DefaultPreferences is the zero-value preferences used when no file exists yet.
@@ -31,6 +33,7 @@ var DefaultPreferences = Preferences{
 	ZoomLevel:     1,
 	ShowHidden:    false,
 	LaunchAtLogin: false,
+	Language:      "en",
 }
 
 // SettingsService persists the frontend's preferences as a single JSON file on

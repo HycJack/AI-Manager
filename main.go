@@ -55,6 +55,8 @@ func main() {
 			// Project management: install/uninstall skills, list projects,
 			// scan effective skills per agent.
 			application.NewService(app.NewProjectService(state)),
+			// Config access (data dir, library dir, folder picker).
+			application.NewService(app.NewConfigService(state)),
 		},
 		// Single instance: a second launch brings the existing window to the
 		// front instead of starting a new process.

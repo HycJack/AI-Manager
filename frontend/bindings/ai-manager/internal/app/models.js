@@ -11,6 +11,82 @@ import { Create as $Create } from "@wailsio/runtime";
 import * as skill$0 from "../skill/models.js";
 
 /**
+ * ConfigInfo is the subset of config fields exposed to the frontend.
+ */
+export class ConfigInfo {
+    /**
+     * Creates a new ConfigInfo instance.
+     * @param {Partial<ConfigInfo>} [$$source = {}] - The source object to create the ConfigInfo.
+     */
+    constructor($$source = {}) {
+        if (!("appName" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["appName"] = "";
+        }
+        if (!("dataDir" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["dataDir"] = "";
+        }
+        if (!("libraryDir" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["libraryDir"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new ConfigInfo instance from a string or object.
+     * @param {any} [$$source = {}]
+     * @returns {ConfigInfo}
+     */
+    static createFrom($$source = {}) {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new ConfigInfo(/** @type {Partial<ConfigInfo>} */($$parsedSource));
+    }
+}
+
+/**
+ * ConfigUpdate is a partial config update from the frontend.
+ */
+export class ConfigUpdate {
+    /**
+     * Creates a new ConfigUpdate instance.
+     * @param {Partial<ConfigUpdate>} [$$source = {}] - The source object to create the ConfigUpdate.
+     */
+    constructor($$source = {}) {
+        if (/** @type {any} */(false)) {
+            /**
+             * @member
+             * @type {string | null | undefined}
+             */
+            this["libraryDir"] = undefined;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new ConfigUpdate instance from a string or object.
+     * @param {any} [$$source = {}]
+     * @returns {ConfigUpdate}
+     */
+    static createFrom($$source = {}) {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new ConfigUpdate(/** @type {Partial<ConfigUpdate>} */($$parsedSource));
+    }
+}
+
+/**
  * Preferences is the typed shape persisted to disk and exposed to the frontend
  * via the Wails3 bindings. Adding a field here + in DEFAULT_PREFERENCES is the
  * only change needed to introduce a new setting — the frontend gets a typed
@@ -61,6 +137,14 @@ export class Preferences {
              * @type {boolean}
              */
             this["launchAtLogin"] = false;
+        }
+        if (!("language" in $$source)) {
+            /**
+             * UI language: "en" or "zh".
+             * @member
+             * @type {string}
+             */
+            this["language"] = "";
         }
 
         Object.assign(this, $$source);

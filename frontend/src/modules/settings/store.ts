@@ -16,6 +16,8 @@ export type Preferences = {
   showHidden: boolean;
   /** Open automatically at login. */
   launchAtLogin: boolean;
+  /** UI language: "en" or "zh". */
+  language: "en" | "zh";
 };
 
 export const DEFAULT_PREFERENCES: Preferences = {
@@ -24,6 +26,7 @@ export const DEFAULT_PREFERENCES: Preferences = {
   zoomLevel: 1,
   showHidden: false,
   launchAtLogin: false,
+  language: "en",
 };
 
 /** Load preferences persisted by the backend SettingsService. */
@@ -35,6 +38,7 @@ export async function loadPreferences(): Promise<Preferences> {
     zoomLevel: p.zoomLevel || DEFAULT_PREFERENCES.zoomLevel,
     showHidden: p.showHidden ?? DEFAULT_PREFERENCES.showHidden,
     launchAtLogin: p.launchAtLogin ?? DEFAULT_PREFERENCES.launchAtLogin,
+    language: (p.language || DEFAULT_PREFERENCES.language) as "en" | "zh",
   };
 }
 
@@ -47,6 +51,7 @@ type PreferencesStore = Preferences & {
   setZoomLevel: (v: number) => void;
   setShowHidden: (v: boolean) => void;
   setLaunchAtLogin: (v: boolean) => void;
+  setLanguage: (v: "en" | "zh") => void;
 };
 
 let initPromise: Promise<void> | null = null;
@@ -86,6 +91,7 @@ function toModel(prefs: Preferences): PreferencesModel {
     zoomLevel: prefs.zoomLevel,
     showHidden: prefs.showHidden,
     launchAtLogin: prefs.launchAtLogin,
+    language: prefs.language,
   });
 }
 
@@ -153,6 +159,10 @@ export const usePreferencesStore = create<PreferencesStore>((set, get) => ({
   },
   setLaunchAtLogin: (launchAtLogin) => {
     set({ launchAtLogin });
+    schedulePersist(get());
+  },
+  setLanguage: (language) => {
+    set({ language });
     schedulePersist(get());
   },
 }));
