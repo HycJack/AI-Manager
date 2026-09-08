@@ -116,7 +116,7 @@ export default function SkillAddDialog({
 
     setLoading(true);
     try {
-      await AddSkill(sourceKind, inputPath.trim(), groupName.trim());
+      await AddSkill(sourceKind, inputPath.trim(), groupName.trim(), []);
       toast(`Skill added from ${currentOption.label}`);
       onOpenChange(false);
       onAdded?.();

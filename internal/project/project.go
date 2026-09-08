@@ -4,11 +4,15 @@ package project
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"runtime"
 	"sync"
 
 	"ai-manager/internal/agents"
+	"ai-manager/internal/config"
 	"ai-manager/internal/platform"
 )
 
@@ -81,7 +85,7 @@ func (m *Manager) SaveProjects(projects []Project) error {
 	if err != nil {
 		return err
 	}
-	return saveAtomic(m.projectsPath(), data)
+	return config.SaveAtomic(m.projectsPath(), data)
 }
 
 // AddProject registers a project. Name defaults to the directory basename.
@@ -155,14 +159,14 @@ func (m *Manager) saveProjectsLocked(projects []Project) error {
 	if err != nil {
 		return err
 	}
-	return saveAtomic(m.projectsPath(), data)
+	return config.SaveAtomic(m.projectsPath(), data)
 }
 
 // InstallSkill creates a symlink from the library skill to the project's target
 // directory. If the skill is already installed (symlink exists), it returns nil.
 //
-// Cross-platform: uses os.Symlink on macOS/Linux. On Windows, os.Symlink
-// works for NTFS; for non-NTFS, a copy fallback would be needed (future).
+// Cross-platform: os.Symlink on macOS/Linux. On Windows, uses mklink /J
+// for directory junctions (works on all filesystems, no admin needed).
 func InstallSkill(librarySkillPath, projectPath string, target agents.InstallTarget) error {
 	targetDir := agents.TargetDir(projectPath, target)
 	if err := os.MkdirAll(targetDir, 0o755); err != nil {
@@ -177,8 +181,28 @@ func InstallSkill(librarySkillPath, projectPath string, target agents.InstallTar
 		return nil // Already installed
 	}
 
-	// Create symlink
-	return os.Symlink(librarySkillPath, linkPath)
+	return createSymlink(librarySkillPath, linkPath)
+}
+
+// createSymlink creates a platform-appropriate symlink or directory junction.
+func createSymlink(target, link string) error {
+	// Try os.Symlink first — works on macOS/Linux and NTFS Windows
+	symlinkErr := os.Symlink(target, link)
+	if symlinkErr == nil {
+		return nil
+	}
+
+	// Fallback: Windows junction via mklink /J
+	if runtime.GOOS == "windows" {
+		cmd := exec.Command("cmd", "/C", "mklink", "/J", link, target)
+		if out, mkErr := cmd.CombinedOutput(); mkErr != nil {
+			return fmt.Errorf("symlink failed and mklink /J failed: symlink: %v; mklink: %w (%s)",
+				symlinkErr, mkErr, string(out))
+		}
+		return nil
+	}
+
+	return fmt.Errorf("cannot create symlink %s -> %s: %w", link, target, symlinkErr)
 }
 
 // UninstallSkill removes the symlink for a skill from a project.
@@ -237,39 +261,3 @@ func ScanProject(projectPath string) []Installation {
 	return installations
 }
 
-// saveAtomic writes data to a file atomically using tmp + rename.
-func saveAtomic(path string, data []byte) error {
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		return err
-	}
-
-	tmp, err := os.CreateTemp(filepath.Dir(path), ".tmp-*")
-	if err != nil {
-		return err
-	}
-	tmpName := tmp.Name()
-
-	success := false
-	defer func() {
-		if !success {
-			tmp.Close()
-			os.Remove(tmpName)
-		}
-	}()
-
-	if _, err := tmp.Write(data); err != nil {
-		return err
-	}
-	if err := tmp.Sync(); err != nil {
-		return err
-	}
-	if err := tmp.Close(); err != nil {
-		return err
-	}
-
-	if err := os.Rename(tmpName, path); err != nil {
-		return err
-	}
-	success = true
-	return nil
-}

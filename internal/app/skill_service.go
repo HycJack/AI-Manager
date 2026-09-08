@@ -99,13 +99,66 @@ func (s *SkillService) GetSkill(name string) (SkillDetail, error) {
 	}, nil
 }
 
-// AddSkill adds a skill to the library from one of 4 source types.
-// The kind parameter determines which scanner to use:
-//   - "local": input is a directory path to scan for skill directories
-//   - "npx": input is an npx/skills.sh/GitHub package name
-//   - "claude": input is a Claude plugin name
-//   - "existing": input is a comma-separated list of existing install paths
-func (s *SkillService) AddSkill(kind, input, groupName string) error {
+// SkillSummary is a lightweight view of a skill for scan results.
+type SkillSummary struct {
+	ID        string `json:"id"`
+	Name      string `json:"name"`
+	Slug      string `json:"slug"`
+	Version   string `json:"version"`
+	Origin    string `json:"origin"`
+	Installed bool   `json:"installed"`
+}
+
+// ScanSkill scans a source without adding anything. Returns the list of
+// discovered skills for preview. The frontend shows these in a result list
+// with multi-select, then calls AddSkill with the selected slugs.
+func (s *SkillService) ScanSkill(kind, input string) ([]SkillSummary, error) {
+	lib, err := s.lib()
+	if err != nil {
+		return nil, err
+	}
+
+	var records []skill.Record
+
+	switch strings.ToLower(strings.TrimSpace(kind)) {
+	case "local":
+		records, err = lib.ScanLocal(input)
+	case "npx":
+		records, err = lib.ScanNpx(input)
+	case "claude":
+		records, err = lib.ScanClaude(input)
+	case "existing":
+		paths := strings.Split(input, ",")
+		for i, p := range paths {
+			paths[i] = strings.TrimSpace(p)
+		}
+		records, err = lib.ScanExisting(paths)
+	default:
+		return nil, fmt.Errorf("unknown skill source kind %q (expected: local, npx, claude, existing)", kind)
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	summaries := make([]SkillSummary, 0, len(records))
+	for _, rec := range records {
+		summaries = append(summaries, SkillSummary{
+			ID:        rec.ID,
+			Name:      rec.Name,
+			Slug:      rec.Slug,
+			Version:   rec.Version,
+			Origin:    string(rec.Origin.Type),
+			Installed: rec.Installed,
+		})
+	}
+	return summaries, nil
+}
+
+// AddSkill adds selected skills to the library. The selectedSlugs parameter
+// contains the slugs of skills to add (from a prior ScanSkill call). If empty,
+// all scanned skills are added.
+func (s *SkillService) AddSkill(kind, input, groupName string, selectedSlugs []string) error {
 	lib, err := s.lib()
 	if err != nil {
 		return err
@@ -117,20 +170,11 @@ func (s *SkillService) AddSkill(kind, input, groupName string) error {
 	case "local":
 		records, err = lib.ScanLocal(input)
 	case "npx":
-		rec, scanErr := lib.ScanNpx(input)
-		if scanErr != nil {
-			return scanErr
-		}
-		records = []skill.Record{*rec}
+		records, err = lib.ScanNpx(input)
 	case "claude":
-		rec, scanErr := lib.ScanClaude(input)
-		if scanErr != nil {
-			return scanErr
-		}
-		records = []skill.Record{*rec}
+		records, err = lib.ScanClaude(input)
 	case "existing":
 		paths := strings.Split(input, ",")
-		// Trim whitespace from each path
 		for i, p := range paths {
 			paths[i] = strings.TrimSpace(p)
 		}
@@ -141,6 +185,21 @@ func (s *SkillService) AddSkill(kind, input, groupName string) error {
 
 	if err != nil {
 		return err
+	}
+
+	// Filter by selected slugs if provided
+	if len(selectedSlugs) > 0 {
+		selected := make(map[string]bool, len(selectedSlugs))
+		for _, slug := range selectedSlugs {
+			selected[slug] = true
+		}
+		filtered := make([]skill.Record, 0, len(records))
+		for _, rec := range records {
+			if selected[rec.Slug] {
+				filtered = append(filtered, rec)
+			}
+		}
+		records = filtered
 	}
 
 	// Add each record to the library

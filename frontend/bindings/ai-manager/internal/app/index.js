@@ -33,5 +33,6 @@ export {
     SearchOptions,
     SearchResult,
     SkillDetail,
+    SkillSummary,
     UpdateInfo
 } from "./models.js";

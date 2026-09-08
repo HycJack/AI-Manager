@@ -22,19 +22,17 @@ import * as skill$0 from "../skill/models.js";
 import * as $models from "./models.js";
 
 /**
- * AddSkill adds a skill to the library from one of 4 source types.
- * The kind parameter determines which scanner to use:
- *   - "local": input is a directory path to scan for skill directories
- *   - "npx": input is an npx/skills.sh/GitHub package name
- *   - "claude": input is a Claude plugin name
- *   - "existing": input is a comma-separated list of existing install paths
+ * AddSkill adds selected skills to the library. The selectedSlugs parameter
+ * contains the slugs of skills to add (from a prior ScanSkill call). If empty,
+ * all scanned skills are added.
  * @param {string} kind
  * @param {string} input
  * @param {string} groupName
+ * @param {string[]} selectedSlugs
  * @returns {$CancellablePromise<void>}
  */
-export function AddSkill(kind, input, groupName) {
-    return $Call.ByID(2329671467, kind, input, groupName);
+export function AddSkill(kind, input, groupName, selectedSlugs) {
+    return $Call.ByID(2329671467, kind, input, groupName, selectedSlugs);
 }
 
 /**
@@ -84,6 +82,20 @@ export function RemoveSkill(name) {
 }
 
 /**
+ * ScanSkill scans a source without adding anything. Returns the list of
+ * discovered skills for preview. The frontend shows these in a result list
+ * with multi-select, then calls AddSkill with the selected slugs.
+ * @param {string} kind
+ * @param {string} input
+ * @returns {$CancellablePromise<$models.SkillSummary[]>}
+ */
+export function ScanSkill(kind, input) {
+    return $Call.ByID(4292178559, kind, input).then(/** @type {($result: any) => any} */(($result) => {
+        return $$createType6($result);
+    }));
+}
+
+/**
  * UpdateSkill updates a skill to its latest version.
  * Currently a no-op since remote update resolution is not implemented.
  * @param {string} name
@@ -99,3 +111,5 @@ const $$createType1 = $Create.Array($$createType0);
 const $$createType2 = $models.SkillDetail.createFrom;
 const $$createType3 = skill$0.Summary.createFrom;
 const $$createType4 = $Create.Array($$createType3);
+const $$createType5 = $models.SkillSummary.createFrom;
+const $$createType6 = $Create.Array($$createType5);

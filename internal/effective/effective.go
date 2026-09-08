@@ -29,6 +29,7 @@ type EffectiveSkill struct {
 	Description   string   `json:"description"`
 	Managed       bool     `json:"managed"`       // symlink back to library
 	Builtin       bool     `json:"builtin"`
+	Plugin        bool     `json:"plugin"`        // provided by a Claude plugin
 	Agents        []string `json:"agents"`        // agent kinds that see this skill
 	Locations     []string `json:"locations"`     // symlink paths (agent-specific dirs)
 	CanonicalPath string   `json:"canonicalPath"` // resolved real source path

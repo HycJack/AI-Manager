@@ -192,26 +192,13 @@ func TestScanNpx(t *testing.T) {
 		input     string
 		wantErr   bool
 		wantType  OriginType
-		wantRepo  string
-		wantSubdir string
+		wantCount int
 	}{
 		{
-			name:     "simple name (skills.sh)",
-			input:    "superpowers",
-			wantType: OriginSkillsSh,
-		},
-		{
-			name:     "owner/repo (GitHub)",
-			input:    "owner/repo",
-			wantType: OriginGitHub,
-			wantRepo: "owner/repo",
-		},
-		{
-			name:     "owner/repo/subdir (GitHub with subdir)",
-			input:    "owner/repo/skills",
-			wantType: OriginGitHub,
-			wantRepo: "owner/repo",
-			wantSubdir: "skills",
+			name:      "simple name (skills.sh)",
+			input:     "superpowers",
+			wantType:  OriginSkillsSh,
+			wantCount: 1,
 		},
 		{
 			name:    "empty input",
@@ -230,7 +217,7 @@ func TestScanNpx(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			rec, err := lib.ScanNpx(tt.input)
+			records, err := lib.ScanNpx(tt.input)
 			if tt.wantErr {
 				if err == nil {
 					t.Error("ScanNpx() expected error, got nil")
@@ -240,63 +227,62 @@ func TestScanNpx(t *testing.T) {
 			if err != nil {
 				t.Fatalf("ScanNpx() returned error: %v", err)
 			}
-			if rec.Origin.Type != tt.wantType {
-				t.Errorf("Origin.Type = %q, want %q", rec.Origin.Type, tt.wantType)
+			if len(records) != tt.wantCount {
+				t.Errorf("ScanNpx() returned %d records, want %d", len(records), tt.wantCount)
 			}
-			if tt.wantRepo != "" && rec.Origin.Repo != tt.wantRepo {
-				t.Errorf("Origin.Repo = %q, want %q", rec.Origin.Repo, tt.wantRepo)
-			}
-			if tt.wantSubdir != "" && rec.Origin.Subdir != tt.wantSubdir {
-				t.Errorf("Origin.Subdir = %q, want %q", rec.Origin.Subdir, tt.wantSubdir)
+			if tt.wantCount > 0 && records[0].Origin.Type != tt.wantType {
+				t.Errorf("Origin.Type = %q, want %q", records[0].Origin.Type, tt.wantType)
 			}
 		})
 	}
 }
 
-func TestScanClaude(t *testing.T) {
-	tests := []struct {
-		name     string
-		input    string
-		wantErr  bool
-		wantType OriginType
-	}{
-		{
-			name:     "simple plugin name",
-			input:    "superpowers",
-			wantType: OriginClaude,
-		},
-		{
-			name:     "owner/plugin format",
-			input:    "owner/plugin",
-			wantType: OriginClaude,
-		},
-		{
-			name:    "empty input",
-			input:   "",
-			wantErr: true,
-		},
-	}
+func TestScanNpx_GitHubClone(t *testing.T) {
+	// GitHub clone tests require network — skipped in unit tests.
+	// Integration tests should test with actual repos.
+	t.Skip("requires network access to github.com")
+}
 
+func TestScanClaude(t *testing.T) {
 	tmp := t.TempDir()
 	lib, _ := NewLibrary(tmp)
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			rec, err := lib.ScanClaude(tt.input)
-			if tt.wantErr {
-				if err == nil {
-					t.Error("ScanClaude() expected error, got nil")
-				}
-				return
-			}
-			if err != nil {
-				t.Fatalf("ScanClaude() returned error: %v", err)
-			}
-			if rec.Origin.Type != tt.wantType {
-				t.Errorf("Origin.Type = %q, want %q", rec.Origin.Type, tt.wantType)
-			}
-		})
+	// Create a fake plugin directory with a skill
+	pluginDir := filepath.Join(tmp, "my-plugin")
+	skillDir := filepath.Join(pluginDir, "my-skill")
+	if err := os.MkdirAll(skillDir, 0o755); err != nil {
+		t.Fatal(err)
 	}
+	if err := os.WriteFile(filepath.Join(skillDir, "SKILL.md"), []byte("# My Skill"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	t.Run("valid plugin path", func(t *testing.T) {
+		records, err := lib.ScanClaude(pluginDir)
+		if err != nil {
+			t.Fatalf("ScanClaude() returned error: %v", err)
+		}
+		if len(records) != 1 {
+			t.Fatalf("ScanClaude() returned %d records, want 1", len(records))
+		}
+		if records[0].Origin.Type != OriginClaude {
+			t.Errorf("Origin.Type = %q, want %q", records[0].Origin.Type, OriginClaude)
+		}
+	})
+
+	t.Run("empty input", func(t *testing.T) {
+		_, err := lib.ScanClaude("")
+		if err == nil {
+			t.Error("ScanClaude() expected error, got nil")
+		}
+	})
+
+	t.Run("nonexistent path", func(t *testing.T) {
+		_, err := lib.ScanClaude(filepath.Join(tmp, "nope"))
+		if err == nil {
+			t.Error("ScanClaude() expected error for nonexistent path, got nil")
+		}
+	})
 }
 
 func TestScanExisting(t *testing.T) {

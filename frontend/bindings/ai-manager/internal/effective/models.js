@@ -44,6 +44,14 @@ export class EffectiveSkill {
              */
             this["builtin"] = false;
         }
+        if (!("plugin" in $$source)) {
+            /**
+             * provided by a Claude plugin
+             * @member
+             * @type {boolean}
+             */
+            this["plugin"] = false;
+        }
         if (!("agents" in $$source)) {
             /**
              * agent kinds that see this skill
@@ -107,14 +115,14 @@ export class EffectiveSkill {
      * @returns {EffectiveSkill}
      */
     static createFrom($$source = {}) {
-        const $$createField4_0 = $$createType0;
         const $$createField5_0 = $$createType0;
+        const $$createField6_0 = $$createType0;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("agents" in $$parsedSource) {
-            $$parsedSource["agents"] = $$createField4_0($$parsedSource["agents"]);
+            $$parsedSource["agents"] = $$createField5_0($$parsedSource["agents"]);
         }
         if ("locations" in $$parsedSource) {
-            $$parsedSource["locations"] = $$createField5_0($$parsedSource["locations"]);
+            $$parsedSource["locations"] = $$createField6_0($$parsedSource["locations"]);
         }
         return new EffectiveSkill(/** @type {Partial<EffectiveSkill>} */($$parsedSource));
     }

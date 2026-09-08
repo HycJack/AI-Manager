@@ -182,7 +182,7 @@ export default function SkillsPage() {
     if (!addInput.trim()) return;
     setAdding(true);
     try {
-      await AddSkill(addKind, addInput.trim(), addGroup.trim());
+      await AddSkill(addKind, addInput.trim(), addGroup.trim(), []);
       toast("Skill added");
       const updated = await ListSkills();
       setSkills(updated);

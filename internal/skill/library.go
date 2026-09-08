@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
@@ -130,15 +131,14 @@ func (l *Library) ScanLocal(root string) ([]Record, error) {
 	return records, nil
 }
 
-// ScanNpx resolves an npx / skills.sh / GitHub package name to a SkillRecord.
+// ScanNpx resolves an npx / skills.sh / GitHub package name to SkillRecords.
 // The input can be:
-//   - "owner/repo" — GitHub shorthand (uses raw GitHub content)
-//   - "owner/repo/subdir" — GitHub with subdirectory
-//   - "package-name" — treated as skills.sh lookup
+//   - "owner/repo" — GitHub shorthand (clones and scans)
+//   - "owner/repo/subdir" — GitHub with subdirectory (clones, scans subdir)
+//   - "package-name" — treated as skills.sh lookup (returns metadata only)
 //
-// Returns a SkillRecord with the resolved origin. The actual content download
-// is handled by the caller (AddSkill copies the files into the library).
-func (l *Library) ScanNpx(packageName string) (*Record, error) {
+// For GitHub inputs, clones the repo to a temp dir and scans for skills.
+func (l *Library) ScanNpx(packageName string) ([]Record, error) {
 	packageName = strings.TrimSpace(packageName)
 	if packageName == "" {
 		return nil, fmt.Errorf("scan npx: empty package name")
@@ -147,67 +147,92 @@ func (l *Library) ScanNpx(packageName string) (*Record, error) {
 	parts := strings.Split(packageName, "/")
 	switch len(parts) {
 	case 1:
-		// Simple name — treat as skills.sh lookup
-		return &Record{
-			ID:    hashString(packageName),
-			Name:  titleCase(packageName),
-			Slug:  slugify(packageName),
-			Version: "1.0.0",
-			Origin: Origin{Type: OriginSkillsSh, Path: packageName},
+		// Simple name — skills.sh lookup (metadata only, no download)
+		return []Record{{
+			ID:        hashString(packageName),
+			Name:      titleCase(packageName),
+			Slug:      slugify(packageName),
+			Version:   "1.0.0",
+			Origin:    Origin{Type: OriginSkillsSh, Path: packageName},
 			Installed: false,
 			UpdatedAt: time.Now().UTC(),
-		}, nil
-	case 2:
-		// owner/repo — GitHub shorthand
-		return &Record{
-			ID:    hashString(packageName),
-			Name:  titleCase(parts[1]),
-			Slug:  slugify(parts[1]),
-			Version: "1.0.0",
-			Origin: Origin{Type: OriginGitHub, Repo: packageName},
-			Installed: false,
-			UpdatedAt: time.Now().UTC(),
-		}, nil
-	case 3:
-		// owner/repo/subdir — GitHub with subdirectory
+		}}, nil
+
+	case 2, 3:
+		// owner/repo or owner/repo/subdir — GitHub clone + scan
 		repo := parts[0] + "/" + parts[1]
-		return &Record{
-			ID:    hashString(packageName),
-			Name:  titleCase(parts[2]),
-			Slug:  slugify(parts[2]),
-			Version: "1.0.0",
-			Origin: Origin{Type: OriginGitHub, Repo: repo, Subdir: parts[2]},
-			Installed: false,
-			UpdatedAt: time.Now().UTC(),
-		}, nil
+		subdir := ""
+		if len(parts) == 3 {
+			subdir = parts[2]
+		}
+		return l.cloneAndScanGitHub(repo, subdir)
+
 	default:
 		return nil, fmt.Errorf("scan npx: invalid package name %q (too many parts)", packageName)
 	}
 }
 
-// ScanClaude resolves a Claude plugin name to a SkillRecord.
-// The input is a plugin identifier (e.g. "superpowers" or "owner/plugin").
-func (l *Library) ScanClaude(plugin string) (*Record, error) {
-	plugin = strings.TrimSpace(plugin)
-	if plugin == "" {
-		return nil, fmt.Errorf("scan claude: empty plugin name")
+// cloneAndScanGitHub clones a GitHub repo to a temp dir and scans for skills.
+func (l *Library) cloneAndScanGitHub(repo, subdir string) ([]Record, error) {
+	tmpDir, err := os.MkdirTemp("", "ai-manager-clone-")
+	if err != nil {
+		return nil, fmt.Errorf("create temp dir: %w", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	cloneDir := filepath.Join(tmpDir, "repo")
+	cmd := exec.Command("git", "clone", "--depth", "1",
+		fmt.Sprintf("https://github.com/%s.git", repo), cloneDir)
+	if out, err := cmd.CombinedOutput(); err != nil {
+		return nil, fmt.Errorf("git clone %s: %w\n%s", repo, err, string(out))
 	}
 
-	name := plugin
-	parts := strings.Split(plugin, "/")
-	if len(parts) == 2 {
-		name = parts[1]
+	// If a subdirectory is specified, scan that; otherwise scan the repo root
+	scanPath := cloneDir
+	if subdir != "" {
+		scanPath = filepath.Join(cloneDir, subdir)
+		if _, err := os.Stat(scanPath); err != nil {
+			return nil, fmt.Errorf("subdirectory %q not found in %s", subdir, repo)
+		}
 	}
 
-	return &Record{
-		ID:    hashString(plugin),
-		Name:  titleCase(name),
-		Slug:  slugify(name),
-		Version: "1.0.0",
-		Origin: Origin{Type: OriginClaude, Path: plugin},
-		Installed: false,
-		UpdatedAt: time.Now().UTC(),
-	}, nil
+	records, err := l.ScanLocal(scanPath)
+	if err != nil {
+		return nil, fmt.Errorf("scan cloned repo %s: %w", repo, err)
+	}
+
+	// Tag each record with its GitHub origin
+	for i := range records {
+		records[i].Origin = Origin{Type: OriginGitHub, Repo: repo, Subdir: subdir}
+	}
+
+	if len(records) == 0 {
+		return nil, fmt.Errorf("no skills found in %s", repo)
+	}
+	return records, nil
+}
+
+// ScanClaude resolves a Claude plugin path to SkillRecords.
+// The input is a local directory path containing skill folders.
+func (l *Library) ScanClaude(pluginPath string) ([]Record, error) {
+	pluginPath = strings.TrimSpace(pluginPath)
+	if pluginPath == "" {
+		return nil, fmt.Errorf("scan claude: empty plugin path")
+	}
+
+	records, err := l.ScanLocal(pluginPath)
+	if err != nil {
+		return nil, fmt.Errorf("scan claude plugin %s: %w", pluginPath, err)
+	}
+
+	for i := range records {
+		records[i].Origin = Origin{Type: OriginClaude, Path: pluginPath}
+	}
+
+	if len(records) == 0 {
+		return nil, fmt.Errorf("no skills found in Claude plugin path %s", pluginPath)
+	}
+	return records, nil
 }
 
 // ScanExisting adopts existing skill installations by scanning the given paths

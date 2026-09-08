@@ -379,6 +379,72 @@ export class SkillDetail {
 }
 
 /**
+ * SkillSummary is a lightweight view of a skill for scan results.
+ */
+export class SkillSummary {
+    /**
+     * Creates a new SkillSummary instance.
+     * @param {Partial<SkillSummary>} [$$source = {}] - The source object to create the SkillSummary.
+     */
+    constructor($$source = {}) {
+        if (!("id" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["id"] = "";
+        }
+        if (!("name" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["name"] = "";
+        }
+        if (!("slug" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["slug"] = "";
+        }
+        if (!("version" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["version"] = "";
+        }
+        if (!("origin" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["origin"] = "";
+        }
+        if (!("installed" in $$source)) {
+            /**
+             * @member
+             * @type {boolean}
+             */
+            this["installed"] = false;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new SkillSummary instance from a string or object.
+     * @param {any} [$$source = {}]
+     * @returns {SkillSummary}
+     */
+    static createFrom($$source = {}) {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new SkillSummary(/** @type {Partial<SkillSummary>} */($$parsedSource));
+    }
+}
+
+/**
  * UpdateInfo describes a skill update check result.
  */
 export class UpdateInfo {
