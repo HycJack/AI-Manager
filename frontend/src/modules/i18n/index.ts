@@ -77,6 +77,16 @@ const translations: Record<Language, Record<string, string>> = {
     "toast.libraryChanged": "Library path updated",
     "toast.libraryScanComplete": "Library scan complete",
     "toast.libraryScanFailed": "Library scan failed: {error}",
+    "toast.skillDeleted": "Deleted {count} skill(s)",
+    "toast.skillDeleteFailed": "Failed to delete: {error}",
+    // Delete dialog
+    "delete.title": "Delete Skills",
+    "delete.subtitle": "You are about to delete the following skills. This action cannot be undone.",
+    "delete.selectedCount": "{count} selected",
+    "delete.builtinWarning": "Builtin skills cannot be deleted",
+    "delete.confirm": "Delete",
+    "delete.cancel": "Cancel",
+    "delete.select": "Delete {count}",
   },
   zh: {
     // App
@@ -142,6 +152,16 @@ const translations: Record<Language, Record<string, string>> = {
     "toast.libraryChanged": "库路径已更新",
     "toast.libraryScanComplete": "库扫描完成",
     "toast.libraryScanFailed": "库扫描失败: {error}",
+    "toast.skillDeleted": "已删除 {count} 个技能",
+    "toast.skillDeleteFailed": "删除失败: {error}",
+    // Delete dialog
+    "delete.title": "删除技能",
+    "delete.subtitle": "您即将删除以下技能。此操作不可撤销。",
+    "delete.selectedCount": "已选择 {count} 个",
+    "delete.builtinWarning": "内置技能无法删除",
+    "delete.confirm": "删除",
+    "delete.cancel": "取消",
+    "delete.select": "删除 {count} 个",
   },
 };
 
