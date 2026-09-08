@@ -44,6 +44,7 @@ import {
 import { ListSkills, GetSkill, AddSkill, RemoveSkill } from "@bindings/ai-manager/internal/app/skillservice";
 import type { Summary } from "@bindings/ai-manager/internal/skill/models.js";
 import type { SkillDetail } from "@bindings/ai-manager/internal/app/models.js";
+import { SkillInstallDialog } from "@/components/SkillInstallDialog";
 
 type GroupedSkills = {
   group: string;
@@ -89,9 +90,13 @@ export default function SkillsPage() {
   const [adding, setAdding] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Summary | null>(null);
+  const [contextMenuSkill, setContextMenuSkill] = useState<Summary | null>(null);
+  const [showInstallDialog, setShowInstallDialog] = useState(false);
+  const [skillsToInstall, setSkillsToInstall] = useState<Summary[]>([]);
   const [deleting, setDeleting] = useState(false);
 
   const parentRef = useRef<HTMLDivElement>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
 
   // Fetch skills on mount
   useEffect(() => {
@@ -217,25 +222,41 @@ export default function SkillsPage() {
     }
   };
 
-  // Keyboard handler for delete
+  // Keyboard handler: Cmd+K (focus search), Cmd+A (select all), Cmd+N (add), Delete (delete)
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if ((e.key === "Delete" || e.key === "Backspace") && selectedIds.size > 0 && detail) {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
         e.preventDefault();
-        setDeleteTarget({
-          id: detail.record.id,
-          name: detail.record.name,
-          slug: detail.record.slug,
-          version: detail.record.version,
-          installed: detail.record.installed,
-          updatedAt: detail.record.updatedAt,
-        } as Summary);
-        setShowDeleteDialog(true);
+        searchRef.current?.focus();
+        return;
+      }
+      if ((e.metaKey || e.ctrlKey) && e.key === "a") {
+        e.preventDefault();
+        setSelectedIds(new Set(filtered.map((s) => s.id)));
+        return;
+      }
+      if ((e.metaKey || e.ctrlKey) && e.key === "n") {
+        e.preventDefault();
+        setShowAddDialog(true);
+        return;
+      }
+      if ((e.key === "Delete" || e.key === "Backspace") && selectedIds.size > 0) {
+        e.preventDefault();
+        const first = filtered.find((s) => selectedIds.has(s.id));
+        if (first) {
+          setDeleteTarget(first);
+          setShowDeleteDialog(true);
+        }
+      }
+      if (e.key === "Escape") {
+        setShowAddDialog(false);
+        setShowDeleteDialog(false);
+        setContextMenuSkill(null);
       }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [selectedIds, detail]);
+  }, [selectedIds, filtered]);
 
   const selectedCount = selectedIds.size;
 
@@ -247,6 +268,7 @@ export default function SkillsPage() {
         <div className="relative ml-2 flex-1 max-w-md">
           <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
+            ref={searchRef}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder={t("skills.search")}
@@ -383,6 +405,10 @@ export default function SkillsPage() {
                               : "hover:bg-muted/50 text-muted-foreground",
                           )}
                           onClick={(e) => handleSelect(skill, e)}
+                          onContextMenu={(e) => {
+                            e.preventDefault();
+                            setContextMenuSkill(skill);
+                          }}
                         >
                           <Layers className="h-4 w-4 shrink-0" />
                           <div className="min-w-0 flex-1">
@@ -404,6 +430,50 @@ export default function SkillsPage() {
                               installed
                             </Badge>
                           )}
+                          <DropdownMenu open={contextMenuSkill?.id === skill.id} onOpenChange={(open) => { if (!open) setContextMenuSkill(null); }}>
+                            <DropdownMenuContent side="bottom" align="start">
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  setSkillsToInstall([skill]);
+                                  setShowInstallDialog(true);
+                                  setContextMenuSkill(null);
+                                }}
+                              >
+                                <Download className="mr-2 h-4 w-4" />
+                                {t("skills.context.install")}
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  setDeleteTarget(skill);
+                                  setShowDeleteDialog(true);
+                                  setContextMenuSkill(null);
+                                }}
+                              >
+                                <Trash2 className="mr-2 h-4 w-4 text-destructive" />
+                                {t("skills.context.delete")}
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  navigator.clipboard.writeText(skill.slug);
+                                  toast("Copied slug");
+                                  setContextMenuSkill(null);
+                                }}
+                              >
+                                <FileText className="mr-2 h-4 w-4" />
+                                {t("skills.context.copyPath")}
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  navigator.clipboard.writeText(skill.name);
+                                  toast("Copied name");
+                                  setContextMenuSkill(null);
+                                }}
+                              >
+                                <FileText className="mr-2 h-4 w-4" />
+                                {t("skills.context.copyName")}
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </div>
                       );
                     })}
@@ -703,6 +773,19 @@ export default function SkillsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+        <SkillInstallDialog
+          open={showInstallDialog}
+          skills={skillsToInstall}
+          onConfirm={() => {
+            setShowInstallDialog(false);
+            setSkillsToInstall([]);
+          }}
+          onCancel={() => {
+            setShowInstallDialog(false);
+            setSkillsToInstall([]);
+          }}
+        />
     </div>
   );
 }

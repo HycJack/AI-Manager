@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { Layers, Settings, FolderTree, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import type { Layout, LayoutChangedMeta } from "react-resizable-panels";
 import { cn } from "@/lib/utils";
@@ -50,6 +51,32 @@ export default function App() {
   const select = (key: TabKey) => {
     setTab(key);
   };
+
+  // Global keyboard shortcuts
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      const mod = e.metaKey || e.ctrlKey;
+      if (mod && e.key === "1") { e.preventDefault(); select("skills"); }
+      else if (mod && e.key === "2") { e.preventDefault(); select("projects"); }
+      else if (mod && e.key === "3") { e.preventDefault(); select("settings"); }
+      else if (mod && e.key === "k") {
+        e.preventDefault();
+        const input = document.querySelector<HTMLInputElement>('input[type="search"], input[placeholder*="搜索"], input[placeholder*="Search"]');
+        input?.focus();
+      } else if (mod && e.key === "a" && tab === "skills") {
+        e.preventDefault();
+        document.dispatchEvent(new CustomEvent("select-all-skills"));
+      } else if ((e.key === "Delete" || e.key === "Backspace") && tab === "skills" && !mod) {
+        // Only trigger if focus is not on an input
+        const target = e.target as HTMLElement;
+        if (target.tagName !== "INPUT" && target.tagName !== "TEXTAREA") {
+          document.dispatchEvent(new CustomEvent("delete-selected-skills"));
+        }
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [tab]);
 
   return (
     <div className="relative flex h-full">
@@ -216,17 +243,23 @@ export default function App() {
 
       {/* Toasts. */}
       <div className="pointer-events-none fixed bottom-6 left-1/2 z-50 flex -translate-x-1/2 flex-col gap-2">
-        {toasts.map((t) => (
-          <div
-            key={t.id}
-            className={cn(
-              "pointer-events-auto rounded-lg border bg-popover px-4 py-2.5 text-sm shadow-lg",
-              t.error ? "border-destructive text-destructive" : "border-border"
-            )}
-          >
-            {t.message}
-          </div>
-        ))}
+        <AnimatePresence>
+          {toasts.map((t) => (
+            <motion.div
+              key={t.id}
+              initial={{ opacity: 0, y: 20, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -10, scale: 0.95 }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
+              className={cn(
+                "pointer-events-auto rounded-lg border bg-popover px-4 py-2.5 text-sm shadow-lg",
+                t.error ? "border-destructive text-destructive" : "border-border"
+              )}
+            >
+              {t.message}
+            </motion.div>
+          ))}
+        </AnimatePresence>
       </div>
     </div>
   );
