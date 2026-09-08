@@ -7,29 +7,6 @@
 import { Create as $Create } from "@wailsio/runtime";
 
 /**
- * AgentKind identifies a specific agent runtime.
- * @readonly
- * @enum {string}
- */
-export const AgentKind = {
-    /**
-     * The Go zero value for the underlying type of the enum.
-     */
-    $zero: "",
-
-    AgentClaude: "claude",
-    AgentCodex: "codex",
-    AgentCursor: "cursor",
-    AgentCline: "cline",
-    AgentContinue: "continue",
-    AgentAider: "aider",
-    AgentAntigravity: "antigravity",
-    AgentTrae: "trae",
-    AgentWindsurf: "windsurf",
-    AgentGeneric: "generic",
-};
-
-/**
  * InstallTarget identifies a skill installation directory within a project.
  * @readonly
  * @enum {string}

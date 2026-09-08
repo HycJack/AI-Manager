@@ -50,13 +50,14 @@ export function EnsureProjectsFileExists() {
 }
 
 /**
- * GetEffectiveSkills returns all skills an agent would see in a project.
+ * GetEffectiveSkills returns all skills visible in a project, deduplicated
+ * across agents by canonical (resolved symlink) path. Mirrors Kitter:
+ * scans all agent directories, resolves symlinks, deduplicates by source.
  * @param {string} projectPath
- * @param {agents$0.AgentKind} agent
  * @returns {$CancellablePromise<effective$0.EffectiveSkill[]>}
  */
-export function GetEffectiveSkills(projectPath, agent) {
-    return $Call.ByID(4293750628, projectPath, agent).then(/** @type {($result: any) => any} */(($result) => {
+export function GetEffectiveSkills(projectPath) {
+    return $Call.ByID(4293750628, projectPath).then(/** @type {($result: any) => any} */(($result) => {
         return $$createType1($result);
     }));
 }

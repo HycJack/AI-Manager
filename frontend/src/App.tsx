@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Layers, Settings, FolderTree, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { Layers, Settings, FolderTree, PanelLeftClose, PanelLeftOpen, Sparkles } from "lucide-react";
 import type { Layout, LayoutChangedMeta } from "react-resizable-panels";
 import { cn } from "@/lib/utils";
 import { useToasts } from "@/lib/toast";
@@ -148,16 +148,16 @@ export default function App() {
               </div>
             ) : (
               <>
-                {/* Brand row — stretches to the window top. pt-14 on macOS
-                    leaves room for the traffic lights. */}
-                <div className="app-drag flex h-14 shrink-0 items-center justify-between px-3 pt-2">
-                  <div className="app-no-drag flex min-w-0 items-center gap-2.5">
+                {/* Brand row — stretches to the window top. On macOS the
+                    traffic-light spacer reserves room for the native controls. */}
+                <div className="app-drag flex h-14 shrink-0 items-center justify-between px-3">
+                  <div className="app-no-drag flex min-w-0 items-center gap-2">
                     <TrafficLightSpacer />
-                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-gradient-to-br from-primary to-accent text-xs font-extrabold text-primary-foreground">
-                      W
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-accent text-primary-foreground">
+                      <Sparkles className="h-4 w-4" />
                     </div>
                     <span className="truncate text-sm font-semibold">
-                      Skeleton
+                      AI-Manager
                     </span>
                   </div>
                   <button

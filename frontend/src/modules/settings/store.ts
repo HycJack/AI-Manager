@@ -61,7 +61,7 @@ let initPromise: Promise<void> | null = null;
 // alongside it only as a fast boot cache so the first paint matches the last
 // session before the async backend load resolves (prevents theme flash).
 
-const FAST_CACHE_KEY = "skeleton-prefs";
+const FAST_CACHE_KEY = "ai-manager-prefs";
 
 function readFastCache(): Partial<Preferences> | null {
   try {

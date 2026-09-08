@@ -11,6 +11,7 @@ import {
   RefreshCw,
   Languages,
   ExternalLink,
+  Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { usePreferencesStore } from "@/modules/settings/store";
@@ -494,15 +495,15 @@ function AboutSection() {
     <div className="space-y-6">
       {/* Project / brand card */}
       <div className="flex items-center gap-4 rounded-xl border border-border/60 bg-card/60 p-4">
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-accent text-sm font-extrabold text-primary-foreground">
-          W
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-accent text-primary-foreground">
+          <Sparkles className="h-5 w-5" />
         </div>
         <div className="flex min-w-0 flex-col">
           <span className="text-[15px] font-semibold tracking-tight">
-            Wails3 Skeleton
+            AI-Manager
           </span>
           <span className="text-[11px] text-muted-foreground">
-            从开源项目抽象出的桌面应用模板
+            Agent 技能管理器
           </span>
           <span className="mt-0.5 font-mono text-[11px] text-muted-foreground">
             v{version || "—"}

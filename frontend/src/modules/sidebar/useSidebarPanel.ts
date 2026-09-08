@@ -8,8 +8,8 @@ export const SIDEBAR_MAX_WIDTH = 400;
 // toggle) rather than vanishing entirely.
 export const SIDEBAR_COLLAPSED_WIDTH = 56;
 
-const SIDEBAR_WIDTH_STORAGE_KEY = "skeleton.sidebar.width";
-const SIDEBAR_COLLAPSED_STORAGE_KEY = "skeleton.sidebar.collapsed";
+const SIDEBAR_WIDTH_STORAGE_KEY = "ai-manager.sidebar.width";
+const SIDEBAR_COLLAPSED_STORAGE_KEY = "ai-manager.sidebar.collapsed";
 
 function clampSidebarWidth(width: number): number {
   return Math.min(

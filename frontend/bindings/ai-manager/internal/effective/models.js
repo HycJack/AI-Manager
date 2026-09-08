@@ -7,7 +7,7 @@
 import { Create as $Create } from "@wailsio/runtime";
 
 /**
- * EffectiveSkill represents a skill as an agent would see it.
+ * EffectiveSkill represents one deduplicated skill across all agents.
  */
 export class EffectiveSkill {
     /**
@@ -22,20 +22,51 @@ export class EffectiveSkill {
              */
             this["name"] = "";
         }
-        if (!("source" in $$source)) {
+        if (!("description" in $$source)) {
             /**
-             * "managed", "unmanaged", "builtin"
              * @member
              * @type {string}
              */
-            this["source"] = "";
+            this["description"] = "";
         }
         if (!("managed" in $$source)) {
             /**
+             * symlink back to library
              * @member
              * @type {boolean}
              */
             this["managed"] = false;
+        }
+        if (!("builtin" in $$source)) {
+            /**
+             * @member
+             * @type {boolean}
+             */
+            this["builtin"] = false;
+        }
+        if (!("agents" in $$source)) {
+            /**
+             * agent kinds that see this skill
+             * @member
+             * @type {string[]}
+             */
+            this["agents"] = [];
+        }
+        if (!("locations" in $$source)) {
+            /**
+             * symlink paths (agent-specific dirs)
+             * @member
+             * @type {string[]}
+             */
+            this["locations"] = [];
+        }
+        if (!("canonicalPath" in $$source)) {
+            /**
+             * resolved real source path
+             * @member
+             * @type {string}
+             */
+            this["canonicalPath"] = "";
         }
         if (!("tokens" in $$source)) {
             /**
@@ -58,6 +89,14 @@ export class EffectiveSkill {
              */
             this["danger"] = false;
         }
+        if (!("skillCount" in $$source)) {
+            /**
+             * number of agents that see this skill
+             * @member
+             * @type {number}
+             */
+            this["skillCount"] = 0;
+        }
 
         Object.assign(this, $$source);
     }
@@ -68,7 +107,18 @@ export class EffectiveSkill {
      * @returns {EffectiveSkill}
      */
     static createFrom($$source = {}) {
+        const $$createField4_0 = $$createType0;
+        const $$createField5_0 = $$createType0;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("agents" in $$parsedSource) {
+            $$parsedSource["agents"] = $$createField4_0($$parsedSource["agents"]);
+        }
+        if ("locations" in $$parsedSource) {
+            $$parsedSource["locations"] = $$createField5_0($$parsedSource["locations"]);
+        }
         return new EffectiveSkill(/** @type {Partial<EffectiveSkill>} */($$parsedSource));
     }
 }
+
+// Private type creation functions
+const $$createType0 = $Create.Array($Create.Any);

@@ -138,15 +138,17 @@ func (s *ProjectService) BrowseProject() (string, error) {
 	return path, nil
 }
 
-// GetEffectiveSkills returns all skills an agent would see in a project.
-func (s *ProjectService) GetEffectiveSkills(projectPath string, agent agents.AgentKind) ([]effective.EffectiveSkill, error) {
+// GetEffectiveSkills returns all skills visible in a project, deduplicated
+// across agents by canonical (resolved symlink) path. Mirrors Kitter:
+// scans all agent directories, resolves symlinks, deduplicates by source.
+func (s *ProjectService) GetEffectiveSkills(projectPath string) ([]effective.EffectiveSkill, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	if projectPath == "" {
 		return nil, os.ErrInvalid
 	}
-	return effective.GetEffectiveSkills(projectPath, agent), nil
+	return effective.GetEffectiveSkills(projectPath), nil
 }
 
 // libraryDir returns the skill library directory from the config.

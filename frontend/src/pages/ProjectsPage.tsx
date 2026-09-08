@@ -24,21 +24,22 @@ import {
   BrowseProject,
   GetEffectiveSkills,
 } from "@bindings/ai-manager/internal/app/projectservice";
-import { AgentKind } from "@bindings/ai-manager/internal/agents/models";
 import type { EffectiveSkill } from "@bindings/ai-manager/internal/effective/models";
 import type { Project } from "@bindings/ai-manager/internal/project/models";
 
+type AgentKind = "claude" | "codex" | "cursor" | "cline" | "continue" | "aider" | "antigravity" | "trae" | "windsurf" | "generic";
+
 // All agents to display in the grid
 const AGENTS: { key: AgentKind; label: string }[] = [
-  { key: AgentKind.AgentClaude, label: "Claude" },
-  { key: AgentKind.AgentCodex, label: "Codex" },
-  { key: AgentKind.AgentCursor, label: "Cursor" },
-  { key: AgentKind.AgentCline, label: "Cline" },
-  { key: AgentKind.AgentContinue, label: "Continue" },
-  { key: AgentKind.AgentAider, label: "Aider" },
-  { key: AgentKind.AgentAntigravity, label: "Antigravity" },
-  { key: AgentKind.AgentTrae, label: "Trae" },
-  { key: AgentKind.AgentWindsurf, label: "Windsurf" },
+  { key: "claude", label: "Claude" },
+  { key: "codex", label: "Codex" },
+  { key: "cursor", label: "Cursor" },
+  { key: "cline", label: "Cline" },
+  { key: "continue", label: "Continue" },
+  { key: "aider", label: "Aider" },
+  { key: "antigravity", label: "Antigravity" },
+  { key: "trae", label: "Trae" },
+  { key: "windsurf", label: "Windsurf" },
 ];
 
 interface AgentRow {
@@ -103,29 +104,21 @@ export default function ProjectsPage() {
     if (!projectPath) return;
     setScanning(true);
     try {
+      // Fetch all effective skills (deduplicated across all agents)
+      const allSkills: EffectiveSkill[] = await GetEffectiveSkills(projectPath);
       const results: AgentRow[] = [];
       for (const { key, label } of AGENTS) {
-        try {
-          const skills: EffectiveSkill[] = await GetEffectiveSkills(projectPath, key);
-          const totalTokens = skills.reduce((sum, s) => sum + s.tokens, 0);
-          results.push({
-            agent: key,
-            label,
-            skillCount: skills.length,
-            totalTokens,
-            warning: totalTokens > 2000 || skills.length > 20,
-            danger: totalTokens > 5000 || skills.length > 50,
-          });
-        } catch {
-          results.push({
-            agent: key,
-            label,
-            skillCount: 0,
-            totalTokens: 0,
-            warning: false,
-            danger: false,
-          });
-        }
+        // Filter to skills this agent sees
+        const skills = allSkills.filter((s) => s.agents?.includes(key));
+        const totalTokens = skills.reduce((sum, s) => sum + s.tokens, 0);
+        results.push({
+          agent: key,
+          label,
+          skillCount: skills.length,
+          totalTokens,
+          warning: totalTokens > 2000 || skills.length > 20,
+          danger: totalTokens > 5000 || skills.length > 50,
+        });
       }
       setAgentRows(results);
     } finally {
@@ -141,7 +134,9 @@ export default function ProjectsPage() {
 
   const loadEffectiveSkills = useCallback(async (projectPath: string, agent: AgentKind) => {
     try {
-      const skills: EffectiveSkill[] = await GetEffectiveSkills(projectPath, agent);
+      const allSkills: EffectiveSkill[] = await GetEffectiveSkills(projectPath);
+      // Filter to skills this agent sees
+      const skills = allSkills.filter((s) => s.agents?.includes(agent));
       setEffectiveSkills(skills);
     } catch (err) {
       console.error("GetEffectiveSkills failed:", err);
@@ -373,7 +368,7 @@ export default function ProjectsPage() {
                 <thead>
                   <tr className="border-b">
                     <th className="text-left py-2 px-3 font-medium text-muted-foreground">Skill</th>
-                    <th className="text-left py-2 px-3 font-medium text-muted-foreground">Source</th>
+                    <th className="text-left py-2 px-3 font-medium text-muted-foreground">Agents</th>
                     <th className="text-center py-2 px-3 font-medium text-muted-foreground">Managed</th>
                     <th className="text-right py-2 px-3 font-medium text-muted-foreground">Tokens</th>
                     <th className="text-right py-2 px-3 font-medium text-muted-foreground">Status</th>
@@ -384,12 +379,22 @@ export default function ProjectsPage() {
                     <tr key={i} className="border-b hover:bg-secondary/30">
                       <td className="py-2.5 px-3 font-medium">{skill.name}</td>
                       <td className="py-2.5 px-3">
-                        <Badge variant="outline" className="text-xs capitalize">
-                          {skill.source}
-                        </Badge>
+                        {skill.agents && skill.agents.length > 0 ? (
+                          <div className="flex gap-1 flex-wrap">
+                            {skill.agents.map((a) => (
+                              <Badge key={a} variant="outline" className="text-xs capitalize">
+                                {a}
+                              </Badge>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
                       </td>
                       <td className="py-2.5 px-3 text-center">
-                        {skill.managed ? (
+                        {skill.builtin ? (
+                          <Badge variant="secondary" className="text-xs">Builtin</Badge>
+                        ) : skill.managed ? (
                           <CheckCircle className="h-4 w-4 text-green-500 inline" />
                         ) : (
                           <X className="h-4 w-4 text-muted-foreground/50 inline" />
