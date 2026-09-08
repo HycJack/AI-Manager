@@ -22,6 +22,13 @@ const translations: Record<Language, Record<string, string>> = {
     "nav.skills": "Skills",
     "nav.projects": "Projects",
     "nav.settings": "Settings",
+    // Skills page
+    "skills.title": "Skills",
+    "skills.search": "Search skills...",
+    "skills.empty.title": "No skills yet",
+    "skills.empty.desc": "Add your first skill to get started. Import from local folders, npx packages, or Claude plugins.",
+    "skills.empty.add": "Add your first skill",
+    "skills.detail.select": "Select a skill to view details",
     // Settings page
     "settings.title": "Settings",
     "settings.subtitle": "General, themes, and application preferences",
@@ -97,6 +104,13 @@ const translations: Record<Language, Record<string, string>> = {
     "nav.skills": "技能",
     "nav.projects": "项目",
     "nav.settings": "设置",
+    // Skills page
+    "skills.title": "技能",
+    "skills.search": "搜索技能...",
+    "skills.empty.title": "暂无技能",
+    "skills.empty.desc": "添加第一个技能开始使用。可从本地文件夹、npx 包或 Claude 插件导入。",
+    "skills.empty.add": "添加第一个技能",
+    "skills.detail.select": "选择一个技能查看详情",
     // Settings page
     "settings.title": "设置",
     "settings.subtitle": "外观、主题与应用偏好",

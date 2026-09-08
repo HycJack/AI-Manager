@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Home, Settings, FolderTree, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { Layers, Settings, FolderTree, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import type { Layout, LayoutChangedMeta } from "react-resizable-panels";
 import { cn } from "@/lib/utils";
 import { useToasts } from "@/lib/toast";
@@ -16,19 +16,19 @@ import {
 } from "@/components/WindowControls";
 import { useSidebarPanel, SIDEBAR_COLLAPSED_WIDTH } from "@/modules/sidebar";
 import { usePreferencesStore } from "@/modules/settings/store";
-import HomePage from "@/pages/HomePage";
+import SkillsPage from "@/pages/SkillsPage";
 import SettingsPage from "@/pages/SettingsPage";
 import ProjectsPage from "@/pages/ProjectsPage";
 
 const NAV = [
-  { key: "home", label: "首页", icon: Home },
+  { key: "skills", label: "技能", icon: Layers },
   { key: "projects", label: "项目", icon: FolderTree },
 ] as const;
 
 type TabKey = (typeof NAV)[number]["key"] | "settings";
 
 export default function App() {
-  const [tab, setTab] = useState<TabKey>("home");
+  const [tab, setTab] = useState<TabKey>("skills");
   const toasts = useToasts();
   const {
     sidebarRef,
@@ -201,7 +201,7 @@ export default function App() {
                     : "100%",
               }}
             >
-              {tab === "home" ? <HomePage /> : tab === "projects" ? <ProjectsPage /> : <SettingsPage />}
+              {tab === "skills" ? <SkillsPage /> : tab === "projects" ? <ProjectsPage /> : <SettingsPage />}
             </main>
           </div>
         </ResizablePanel>
@@ -239,7 +239,7 @@ function NavButton({
   onClick,
 }: {
   active: boolean;
-  icon: typeof Home;
+  icon: typeof Layers;
   label: string;
   onClick: () => void;
 }) {
@@ -267,7 +267,7 @@ function IconButton({
   onClick,
 }: {
   active: boolean;
-  icon: typeof Home;
+  icon: typeof Layers;
   label: string;
   onClick: () => void;
 }) {
