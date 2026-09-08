@@ -12,6 +12,8 @@ import (
 	"os"
 	"path/filepath"
 	"time"
+
+	"ai-manager/internal/platform"
 )
 
 // Config holds all user-adjustable settings for the application.
@@ -34,13 +36,16 @@ type Config struct {
 }
 
 // Default returns the default configuration rooted in the user's home
-// directory.
+// directory, using the platform-appropriate data directory.
 func Default() *Config {
-	home, _ := os.UserHomeDir()
-	base := filepath.Join(home, ".ai-manager")
+	dataDir, _ := platform.DataDir()
+	if dataDir == "" {
+		home, _ := os.UserHomeDir()
+		dataDir = filepath.Join(home, ".ai-manager")
+	}
 	return &Config{
-		AppName:  "Wails3 Skeleton",
-		DataDir:  base,
+		AppName:  "AI-Manager",
+		DataDir:  dataDir,
 		LogLevel: "info",
 		// Empty by default: auto-update is opt-in until the user sets a real
 		// "owner/repo" in config.json. Prevents the app from hitting GitHub
@@ -65,16 +70,54 @@ func Load(path string) (*Config, error) {
 	return c, nil
 }
 
-// Save writes the config to disk.
+// Save writes the config to disk using atomic write (tmp + rename).
 func (c *Config) Save(path string) error {
 	data, err := json.MarshalIndent(c, "", "  ")
 	if err != nil {
 		return err
 	}
+	return SaveAtomic(path, data)
+}
+
+// SaveAtomic writes data to a file atomically using tmp + rename.
+// This ensures the file is never in a partially-written state.
+func SaveAtomic(path string, data []byte) error {
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return err
 	}
-	return os.WriteFile(path, data, 0o644)
+
+	// Write to a temporary file in the same directory
+	tmp, err := os.CreateTemp(filepath.Dir(path), ".tmp-*")
+	if err != nil {
+		return err
+	}
+	tmpName := tmp.Name()
+
+	// Ensure cleanup on error
+	success := false
+	defer func() {
+		if !success {
+			tmp.Close()
+			os.Remove(tmpName)
+		}
+	}()
+
+	if _, err := tmp.Write(data); err != nil {
+		return err
+	}
+	if err := tmp.Sync(); err != nil {
+		return err
+	}
+	if err := tmp.Close(); err != nil {
+		return err
+	}
+
+	// Atomic rename
+	if err := os.Rename(tmpName, path); err != nil {
+		return err
+	}
+	success = true
+	return nil
 }
 
 // EnsureDirs creates all configured directories.
@@ -84,8 +127,60 @@ func (c *Config) EnsureDirs() error {
 
 // DefaultPath returns the standard on-disk location of the config file.
 func DefaultPath() string {
-	home, _ := os.UserHomeDir()
-	return filepath.Join(home, ".ai-manager", "config.json")
+	dataDir, _ := platform.DataDir()
+	if dataDir == "" {
+		home, _ := os.UserHomeDir()
+		dataDir = filepath.Join(home, ".ai-manager")
+	}
+	return filepath.Join(dataDir, "config.json")
+}
+
+// Registry holds the skill library metadata persisted to registry.json.
+type Registry struct {
+	Skills []SkillEntry `json:"skills"`
+	Groups []GroupEntry `json:"groups"`
+}
+
+// SkillEntry is a minimal entry in the registry (full details in metadata.json).
+type SkillEntry struct {
+	ID        string `json:"id"`
+	Name      string `json:"name"`
+	Slug      string `json:"slug"`
+	Version   string `json:"version"`
+	Installed bool   `json:"installed"`
+	Path      string `json:"path"`
+}
+
+// GroupEntry is a group definition in the registry.
+type GroupEntry struct {
+	ID     string   `json:"id"`
+	Name   string   `json:"name"`
+	Skills []string `json:"skills"`
+}
+
+// LoadRegistry reads the registry file, returning an empty registry if not found.
+func LoadRegistry(path string) (*Registry, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return &Registry{}, nil
+		}
+		return nil, err
+	}
+	var reg Registry
+	if err := json.Unmarshal(data, &reg); err != nil {
+		return nil, err
+	}
+	return &reg, nil
+}
+
+// SaveRegistry writes the registry to disk atomically.
+func (r *Registry) SaveRegistry(path string) error {
+	data, err := json.MarshalIndent(r, "", "  ")
+	if err != nil {
+		return err
+	}
+	return SaveAtomic(path, data)
 }
 
 // HTTPClient builds an *http.Client that routes through the configured proxy
