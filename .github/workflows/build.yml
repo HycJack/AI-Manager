@@ -68,7 +68,11 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ai-manager-macos
-          path: bin/*.app
+          # wails3 build emits the bare binary, not an .app -- that only
+          # exists after `wails3 package`, and not at bin/*.app. The old
+          # glob never matched, so this artifact was silently empty;
+          # upload-artifact@v4 defaults to warn, not fail.
+          path: bin/ai-manager
 
       - name: Upload DMG
         if: always()
@@ -143,11 +147,14 @@ jobs:
 
       - name: Install dependencies
         run: |
-          # Retried: the runner image ships Google Chrome and Microsoft apt repos
-          # that occasionally return "Hash Sum mismatch", which makes apt-get
-          # update exit 100 and kill the step before any install runs. None of
-          # the packages below come from those repos.
-          sudo apt-get update || sudo apt-get update
+          # The ubuntu-24.04 runner ships a Google Chrome apt repo that
+          # currently returns "Hash Sum mismatch" on every fetch -- retried
+          # twice, failed both times, so it is stable rather than flaky. That
+          # makes apt-get update exit 100 and kills this step before any
+          # package is installed. We don't use Chrome, so drop the source; the
+          # install below is the real check.
+          sudo rm -f /etc/apt/sources.list.d/google-chrome*
+          sudo apt-get update || true
           # libgtk-4-dev + libwebkitgtk-6.0-dev are needed by BOTH steps below:
           # `go install` compiles wails3's cgo operatingsystem package, and the
           # later `wails3 build` compiles the app itself.
