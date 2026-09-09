@@ -27,21 +27,16 @@ import {
 import type { EffectiveSkill } from "@bindings/ai-manager/internal/effective/models";
 import type { Project } from "@bindings/ai-manager/internal/project/models";
 
-type AgentKind = "universal" | "claude-code" | "codex" | "cursor" | "opencode" | "pi" | "grok" | "antigravity" | "droid" | "copilot";
+import type { AgentKey } from "@/components/agents";
+import { AGENT_META, AgentIcon, agentLabel } from "@/components/agents";
 
-// All agents to display in the grid
-const AGENTS: { key: AgentKind; label: string }[] = [
-  { key: "claude-code", label: "Claude Code" },
-  { key: "codex", label: "Codex" },
-  { key: "cursor", label: "Cursor" },
-  { key: "opencode", label: "OpenCode" },
-  { key: "pi", label: "Pi" },
-  { key: "grok", label: "Grok" },
-  { key: "antigravity", label: "Antigravity" },
-  { key: "droid", label: "Droid" },
-  { key: "copilot", label: "Copilot" },
-  { key: "universal", label: "Universal" },
-];
+type AgentKind = AgentKey;
+
+// All agents to display in the grid (single source of truth: AGENT_META).
+const AGENTS: { key: AgentKind; label: string }[] = AGENT_META.map((m) => ({
+  key: m.key,
+  label: m.label,
+}));
 
 interface AgentRow {
   agent: AgentKind;
@@ -322,7 +317,18 @@ export default function ProjectsPage() {
                       )}
                       onClick={() => handleSelectAgent(row.agent)}
                     >
-                      <td className="py-2.5 px-3 font-medium">{row.label}</td>
+                      <td className="py-2.5 px-3">
+                        <div className="flex items-center gap-2.5">
+                          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-muted/60">
+                            <AgentIcon
+                              agent={row.agent}
+                              size={14}
+                              className="text-muted-foreground"
+                            />
+                          </span>
+                          <span className="font-medium">{row.label}</span>
+                        </div>
+                      </td>
                       <td className="py-2.5 px-3 text-right tabular-nums">{row.skillCount}</td>
                       <td className="py-2.5 px-3 text-right tabular-nums">
                         {row.totalTokens > 0 ? row.totalTokens.toLocaleString() : "—"}
@@ -383,8 +389,13 @@ export default function ProjectsPage() {
                         {skill.agents && skill.agents.length > 0 ? (
                           <div className="flex gap-1 flex-wrap">
                             {skill.agents.map((a) => (
-                              <Badge key={a} variant="outline" className="text-xs capitalize">
-                                {a}
+                              <Badge
+                                key={a}
+                                variant="outline"
+                                className="text-xs gap-1 py-0.5 normal-case"
+                              >
+                                <AgentIcon agent={a} size={11} />
+                                {agentLabel(a)}
                               </Badge>
                             ))}
                           </div>

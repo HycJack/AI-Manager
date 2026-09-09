@@ -45,6 +45,7 @@ import { ListSkills, GetSkill, AddSkill, RemoveSkill } from "@bindings/ai-manage
 import type { Summary } from "@bindings/ai-manager/internal/skill/models.js";
 import type { SkillDetail } from "@bindings/ai-manager/internal/app/models.js";
 import { SkillInstallDialog } from "@/components/SkillInstallDialog";
+import { AGENT_META, AgentIcon } from "@/components/agents";
 
 type GroupedSkills = {
   group: string;
@@ -93,6 +94,9 @@ export default function SkillsPage() {
   const [contextMenuSkill, setContextMenuSkill] = useState<Summary | null>(null);
   const [showInstallDialog, setShowInstallDialog] = useState(false);
   const [skillsToInstall, setSkillsToInstall] = useState<Summary[]>([]);
+  const [installTargets, setInstallTargets] = useState<Set<string>>(
+    new Set(["universal"]),
+  );
   const [deleting, setDeleting] = useState(false);
 
   const parentRef = useRef<HTMLDivElement>(null);
@@ -166,6 +170,9 @@ export default function SkillsPage() {
 
       // Load detail
       setLoadingDetail(true);
+      // Reset the Install tab preview to the default target for the new skill,
+      // so selections don't leak across skills.
+      setInstallTargets(new Set(["universal"]));
       GetSkill(skill.name)
         .then((d) => {
           setDetail(d);
@@ -176,6 +183,37 @@ export default function SkillsPage() {
     },
     [selectedIds],
   );
+
+  // Toggle an install target checkbox in the detail Install tab.
+  const toggleInstallTarget = useCallback((target: string) => {
+    setInstallTargets((prev) => {
+      const next = new Set(prev);
+      if (next.has(target)) next.delete(target);
+      else next.add(target);
+      return next;
+    });
+  }, []);
+
+  // Build a Summary from the currently displayed detail record.
+  const detailSummary = useCallback((): Summary | null => {
+    if (!detail) return null;
+    return {
+      id: detail.record.id,
+      name: detail.record.name,
+      slug: detail.record.slug,
+      version: detail.record.version,
+      installed: detail.record.installed,
+      updatedAt: detail.record.updatedAt,
+    } as Summary;
+  }, [detail]);
+
+  // Open the real install dialog pre-filled with this skill.
+  const openInstallFromDetail = useCallback(() => {
+    const summary = detailSummary();
+    if (!summary) return;
+    setSkillsToInstall([summary]);
+    setShowInstallDialog(true);
+  }, [detailSummary]);
 
   // Handle add skill
   const handleAdd = async () => {
@@ -434,6 +472,9 @@ export default function SkillsPage() {
                             <DropdownMenuContent side="bottom" align="start">
                               <DropdownMenuItem
                                 onClick={() => {
+                                  // Context-menu installs use the default target,
+                                  // not the detail tab's selection.
+                                  setInstallTargets(new Set(["universal"]));
                                   setSkillsToInstall([skill]);
                                   setShowInstallDialog(true);
                                   setContextMenuSkill(null);
@@ -593,33 +634,53 @@ export default function SkillsPage() {
                                   Install Targets
                                 </h3>
                                 <p className="text-xs text-muted-foreground">
-                                  Select where to install this skill.
+                                  Where this skill can be installed. Select a
+                                  target to preview, then confirm in the
+                                  install dialog.
                                 </p>
                               </div>
-                              <div className="grid gap-2">
-                                {[
-                                  { label: "Shared (.agents/skills)", value: "shared" },
-                                  { label: "Claude (.claude/skills)", value: "claude" },
-                                  { label: "Codex (.codex/skills)", value: "codex" },
-                                  { label: "Cursor (.cursor/skills)", value: "cursor" },
-                                ].map((target) => (
+                              <div className="grid grid-cols-1 gap-1.5">
+                                {AGENT_META.map((target) => (
                                   <div
-                                    key={target.value}
-                                    className="flex items-center gap-3 rounded-lg border border-border/60 p-3"
+                                    key={target.key}
+                                    className="flex items-center gap-3 rounded-lg border border-border/60 p-2.5 transition-colors hover:bg-muted/50"
                                   >
-                                    <Checkbox id={target.value} />
+                                    <Checkbox
+                                      id={`install-target-${target.key}`}
+                                      checked={installTargets.has(target.key)}
+                                      onCheckedChange={() =>
+                                        toggleInstallTarget(target.key)
+                                      }
+                                    />
                                     <label
-                                      htmlFor={target.value}
-                                      className="cursor-pointer text-sm"
+                                      htmlFor={`install-target-${target.key}`}
+                                      className="flex flex-1 cursor-pointer items-center gap-2.5 text-sm"
                                     >
-                                      {target.label}
+                                      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-muted/60">
+                                        <AgentIcon
+                                          agent={target.key}
+                                          size={14}
+                                          className="text-muted-foreground"
+                                        />
+                                      </span>
+                                      <span className="font-medium">
+                                        {target.label}
+                                      </span>
+                                      <span className="ml-auto text-xs text-muted-foreground">
+                                        {target.key === "universal"
+                                          ? ".agents/skills"
+                                          : `.${target.key}/skills`}
+                                      </span>
                                     </label>
                                   </div>
                                 ))}
                               </div>
-                              <Button disabled className="w-full">
+                              <Button
+                                className="w-full"
+                                onClick={openInstallFromDetail}
+                              >
                                 <Download className="mr-2 h-4 w-4" />
-                                Install
+                                Install to selected targets
                               </Button>
                             </div>
                           </TabsContent>
@@ -777,6 +838,7 @@ export default function SkillsPage() {
         <SkillInstallDialog
           open={showInstallDialog}
           skills={skillsToInstall}
+          defaultTargets={Array.from(installTargets)}
           onConfirm={() => {
             setShowInstallDialog(false);
             setSkillsToInstall([]);

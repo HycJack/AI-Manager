@@ -9,6 +9,11 @@ on:
 env:
   GO_VERSION: '1.27'
   NODE_VERSION: '20'
+  # Pin the CLI to the exact version in go.mod. Never use @latest: a newer CLI
+  # generating bindings against an older library can fail, and if a future
+  # release moves the cmd/wails3 package the install step breaks outright, which
+  # then surfaces downstream as "wails3: command not found".
+  WAILS_VERSION: 'v3.0.0-beta.14'
 
 jobs:
   # ── macOS (universal) ──────────────────────────────────
@@ -28,17 +33,25 @@ jobs:
         with:
           go-version: ${{ env.GO_VERSION }}
 
-      - name: Install wails3 CLI
-        run: go install github.com/wailsapp/wails/v3/cmd/wails3@latest
+      - name: Install wails3 CLI (pinned to go.mod)
+        env:
+          WAILS_VERSION: ${{ env.WAILS_VERSION }}
+        run: |
+          GOBIN="$(go env GOPATH)/bin" go install github.com/wailsapp/wails/v3/cmd/wails3@${WAILS_VERSION}
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
 
-      - name: Add wails3 to PATH
-        run: echo "$HOME/go/bin" >> "$GITHUB_PATH"
+      - name: Verify wails3 CLI
+        run: wails3 version
 
       - name: Install frontend deps
         run: cd frontend && npm ci
 
-      - name: Generate bindings
-        run: wails3 generate bindings
+      - name: Generate bindings (TypeScript)
+        # -clean/-time-type/-ts mirror build/Taskfile.yml:generate:bindings.
+        # -f '<BUILD_FLAGS>' is intentionally omitted: the repo's only build
+        # tags are platform entry points (build/ios, build/android), so no
+        # desktop method is tag-gated and the flag would not change output.
+        run: wails3 generate bindings -clean=true -time-type=Date -ts
 
       - name: Build
         run: wails3 build
@@ -78,17 +91,25 @@ jobs:
         with:
           go-version: ${{ env.GO_VERSION }}
 
-      - name: Install wails3 CLI
-        run: go install github.com/wailsapp/wails/v3/cmd/wails3@latest
+      - name: Install wails3 CLI (pinned to go.mod)
+        env:
+          WAILS_VERSION: ${{ env.WAILS_VERSION }}
+        run: |
+          GOBIN="$(go env GOPATH)/bin" go install github.com/wailsapp/wails/v3/cmd/wails3@${WAILS_VERSION}
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
 
-      - name: Add wails3 to PATH
-        run: echo "$HOME/go/bin" >> "$GITHUB_PATH"
+      - name: Verify wails3 CLI
+        run: wails3 version
 
       - name: Install frontend deps
         run: cd frontend && npm ci
 
-      - name: Generate bindings
-        run: wails3 generate bindings
+      - name: Generate bindings (TypeScript)
+        # -clean/-time-type/-ts mirror build/Taskfile.yml:generate:bindings.
+        # -f '<BUILD_FLAGS>' is intentionally omitted: the repo's only build
+        # tags are platform entry points (build/ios, build/android), so no
+        # desktop method is tag-gated and the flag would not change output.
+        run: wails3 generate bindings -clean=true -time-type=Date -ts
 
       - name: Build
         run: wails3 build
@@ -125,17 +146,25 @@ jobs:
         with:
           go-version: ${{ env.GO_VERSION }}
 
-      - name: Install wails3 CLI
-        run: go install github.com/wailsapp/wails/v3/cmd/wails3@latest
+      - name: Install wails3 CLI (pinned to go.mod)
+        env:
+          WAILS_VERSION: ${{ env.WAILS_VERSION }}
+        run: |
+          GOBIN="$(go env GOPATH)/bin" go install github.com/wailsapp/wails/v3/cmd/wails3@${WAILS_VERSION}
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
 
-      - name: Add wails3 to PATH
-        run: echo "$HOME/go/bin" >> "$GITHUB_PATH"
+      - name: Verify wails3 CLI
+        run: wails3 version
 
       - name: Install frontend deps
         run: cd frontend && npm ci
 
-      - name: Generate bindings
-        run: wails3 generate bindings
+      - name: Generate bindings (TypeScript)
+        # -clean/-time-type/-ts mirror build/Taskfile.yml:generate:bindings.
+        # -f '<BUILD_FLAGS>' is intentionally omitted: the repo's only build
+        # tags are platform entry points (build/ios, build/android), so no
+        # desktop method is tag-gated and the flag would not change output.
+        run: wails3 generate bindings -clean=true -time-type=Date -ts
 
       - name: Build
         run: wails3 build

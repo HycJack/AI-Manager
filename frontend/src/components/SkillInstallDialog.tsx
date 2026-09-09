@@ -24,6 +24,7 @@ import { cn } from "@/lib/utils";
 import { InstallSkills, BrowseProject, ListProjects } from "@bindings/ai-manager/internal/app/projectservice";
 import { InstallTarget } from "@bindings/ai-manager/internal/agents/models";
 import type { Summary } from "@bindings/ai-manager/internal/skill/models";
+import { AgentIcon } from "@/components/agents";
 
 // ---------------------------------------------------------------------------
 // Target definitions
@@ -53,6 +54,11 @@ interface SkillInstallDialogProps {
   onCancel: () => void;
   /** Pre-populated projects list (optional). If empty, we fetch on open. */
   projects?: { path: string; name: string }[];
+  /**
+   * Targets pre-checked when the dialog opens. Defaults to universal.
+   * Used by the detail panel's Install tab to pass through its selection.
+   */
+  defaultTargets?: string[];
 }
 
 // ---------------------------------------------------------------------------
@@ -65,6 +71,7 @@ export function SkillInstallDialog({
   onConfirm,
   onCancel,
   projects = [],
+  defaultTargets,
 }: SkillInstallDialogProps) {
   const { t } = useI18n();
   const [location, setLocation] = useState<"project" | "global">("project");
@@ -80,17 +87,18 @@ export function SkillInstallDialog({
     name: string;
   }[]>([]);
 
-  // Reset state when dialog opens
+  // Reset state when dialog opens. Targets come from the caller (detail
+  // Install tab) when provided, otherwise fall back to universal.
   useEffect(() => {
     if (open) {
       setLocation("project");
       setProjectPath("");
-      setSelectedTargets(new Set(["shared"]));
+      setSelectedTargets(new Set(defaultTargets && defaultTargets.length > 0 ? defaultTargets : ["universal"]));
       setInstalling(false);
       setPicking(false);
       setFetchedProjects([]);
     }
-  }, [open]);
+  }, [open, defaultTargets]);
 
   // Fetch projects when opened if none provided
   useEffect(() => {
@@ -109,10 +117,10 @@ export function SkillInstallDialog({
 
   const allProjects = projects.length > 0 ? projects : fetchedProjects;
 
-  // When switching to global, force only "shared" selected
+  // When switching to global, force only "universal" selected
   useEffect(() => {
     if (location === "global") {
-      setSelectedTargets(new Set(["shared"]));
+      setSelectedTargets(new Set(["universal"]));
     }
   }, [location]);
 
@@ -146,9 +154,9 @@ export function SkillInstallDialog({
   function handleLocationChange(newLocation: "project" | "global") {
     setLocation(newLocation);
     if (newLocation === "project") {
-      // Restore shared as default if nothing selected
+      // Restore universal as default if nothing selected
       setSelectedTargets((prev) => {
-        if (prev.size === 0) return new Set(["shared"]);
+        if (prev.size === 0) return new Set(["universal"]);
         return prev;
       });
     }
@@ -312,7 +320,7 @@ export function SkillInstallDialog({
             <Label>{t("install.targets")}</Label>
             <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
               {ALL_TARGETS.map((target) => {
-                const isDisabled = location === "global" && target.value !== "shared";
+                const isDisabled = location === "global" && target.value !== "universal";
                 const checked = selectedTargets.has(target.value);
                 return (
                   <label
@@ -330,6 +338,7 @@ export function SkillInstallDialog({
                       disabled={isDisabled || installing}
                       onCheckedChange={() => toggleTarget(target.value, isDisabled)}
                     />
+                    <AgentIcon agent={target.value} size={14} />
                     <span className="text-xs font-medium">{target.label}</span>
                   </label>
                 );
