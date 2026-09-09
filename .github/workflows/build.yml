@@ -74,19 +74,32 @@ jobs:
       - name: Package (DMG)
         run: wails3 task darwin:create:dmg
 
+      - name: Stage distribution artifacts
+        # The .app has to be zipped. upload-artifact stores a directory's
+        # contents individually and download-artifact flattens them again, so
+        # uploading bin/ai-manager.app directly landed loose Assets.car,
+        # CodeResources, icons.icns and Info.plist files on the release page
+        # instead of a usable bundle.
+        # The extensionless universal binary is renamed so it is not confused
+        # with ai-manager.exe / ai-manager.deb on the release page.
+        run: |
+          cd bin
+          zip -qr ai-manager.app.zip ai-manager.app
+          mv ai-manager ai-manager-darwin-universal
+
       - name: Upload binary
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: ai-manager-macos
-          path: bin/ai-manager
+          path: bin/ai-manager-darwin-universal
 
       - name: Upload app bundle
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: ai-manager-macos-app
-          path: bin/ai-manager.app
+          path: bin/ai-manager.app.zip
 
       - name: Upload DMG
         if: always()
