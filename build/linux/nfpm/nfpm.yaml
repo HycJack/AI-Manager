@@ -3,26 +3,29 @@
 #
 # The lines below are called `modelines`. See `:help modeline`
 
-name: "cpm_orc"
+name: "ai-manager"
 arch: ${GOARCH}
 platform: "linux"
 version: "0.1.0"
 section: "default"
 priority: "extra"
 maintainer: ${GIT_COMMITTER_NAME} <${GIT_COMMITTER_EMAIL}>
-description: "A cpm_orc application"
-vendor: "My Company"
-homepage: "https://wails.io"
+description: "Cross-platform Agent Skills manager"
+vendor: "HycJack"
+homepage: "https://github.com/HycJack/AI-Manager"
 license: "MIT"
 release: "1"
 
 contents:
-  - src: "./bin/cpm_orc"
-    dst: "/usr/local/bin/cpm_orc"
+  # Sources resolve relative to the repo root; the .desktop file is generated
+  # by build/linux/Taskfile.yml:generate:dotdesktop, which every create:*
+  # packaging task runs first.
+  - src: "./bin/ai-manager"
+    dst: "/usr/local/bin/ai-manager"
   - src: "./build/appicon.png"
-    dst: "/usr/share/icons/hicolor/128x128/apps/cpm_orc.png"
-  - src: "./build/linux/cpm_orc.desktop"
-    dst: "/usr/share/applications/cpm_orc.desktop"
+    dst: "/usr/share/icons/hicolor/128x128/apps/ai-manager.png"
+  - src: "./build/linux/ai-manager.desktop"
+    dst: "/usr/share/applications/ai-manager.desktop"
 
 # Default dependencies for the GTK4 + WebKitGTK 6.0 stack (Ubuntu 24.04+ / Debian 13+)
 depends:
