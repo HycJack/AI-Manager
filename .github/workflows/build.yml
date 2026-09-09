@@ -34,6 +34,10 @@ jobs:
           go-version: ${{ env.GO_VERSION }}
 
       - name: Install wails3 CLI (pinned to go.mod)
+        # shell: bash — the GOBIN= prefix below is POSIX inline-assignment
+        # syntax; PowerShell (windows-2022's default shell) rejects it with
+        # "The term 'GOBIN=...' is not recognized".
+        shell: bash
         env:
           WAILS_VERSION: ${{ env.WAILS_VERSION }}
         run: |
@@ -92,6 +96,10 @@ jobs:
           go-version: ${{ env.GO_VERSION }}
 
       - name: Install wails3 CLI (pinned to go.mod)
+        # shell: bash — the GOBIN= prefix below is POSIX inline-assignment
+        # syntax; PowerShell (windows-2022's default shell) rejects it with
+        # "The term 'GOBIN=...' is not recognized".
+        shell: bash
         env:
           WAILS_VERSION: ${{ env.WAILS_VERSION }}
         run: |
@@ -127,14 +135,19 @@ jobs:
   # ── Linux ──────────────────────────────────────────────
   linux:
     name: Linux
-    runs-on: ubuntu-22.04
+    # 24.04 is required, not just newer: wails3 links GTK4 + WebKitGTK 6.0,
+    # and libwebkitgtk-6.0-dev does not exist on 22.04 (WebKitGTK 2.36).
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
 
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y gcc libgl1-mesa-dev libxkbcommon-dev
+          # libgtk-4-dev + libwebkitgtk-6.0-dev are needed by BOTH steps below:
+          # `go install` compiles wails3's cgo operatingsystem package, and the
+          # later `wails3 build` compiles the app itself.
+          sudo apt-get install -y gcc libgl1-mesa-dev libxkbcommon-dev libgtk-4-dev libwebkitgtk-6.0-dev
 
       - uses: actions/setup-node@v4
         with:
@@ -147,6 +160,10 @@ jobs:
           go-version: ${{ env.GO_VERSION }}
 
       - name: Install wails3 CLI (pinned to go.mod)
+        # shell: bash — the GOBIN= prefix below is POSIX inline-assignment
+        # syntax; PowerShell (windows-2022's default shell) rejects it with
+        # "The term 'GOBIN=...' is not recognized".
+        shell: bash
         env:
           WAILS_VERSION: ${{ env.WAILS_VERSION }}
         run: |
