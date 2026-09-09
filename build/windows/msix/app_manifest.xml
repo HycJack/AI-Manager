@@ -8,15 +8,15 @@
   IgnorableNamespaces="uap3">
   
   <Identity 
-    Name="com.example.cpmorc"
-    Publisher="CN=My Company"
+    Name="io.hycjack.ai-manager"
+    Publisher="CN=HycJack"
     Version="0.1.0.0" 
     ProcessorArchitecture="arm64" />
   
   <Properties>
-    <DisplayName>My Product</DisplayName>
-    <PublisherDisplayName>My Company</PublisherDisplayName>
-    <Description>A cpm_orc application</Description>
+    <DisplayName>AI-Manager</DisplayName>
+    <PublisherDisplayName>HycJack</PublisherDisplayName>
+    <Description>Cross-platform Agent Skills manager</Description>
     <Logo>Assets\StoreLogo.png</Logo>
   </Properties>
   
@@ -29,10 +29,10 @@
   </Resources>
   
   <Applications>
-    <Application Id="com.example.cpmorc" Executable="cpm_orc" EntryPoint="Windows.FullTrustApplication">
+    <Application Id="io.hycjack.ai-manager" Executable="ai-manager" EntryPoint="Windows.FullTrustApplication">
       <uap:VisualElements
-        DisplayName="My Product"
-        Description="A cpm_orc application"
+        DisplayName="AI-Manager"
+        Description="Cross-platform Agent Skills manager"
         BackgroundColor="transparent"
         Square150x150Logo="Assets\Square150x150Logo.png"
         Square44x44Logo="Assets\Square44x44Logo.png">
@@ -41,7 +41,7 @@
       </uap:VisualElements>
       
       <Extensions>
-        <desktop:Extension Category="windows.fullTrustProcess" Executable="cpm_orc" />
+        <desktop:Extension Category="windows.fullTrustProcess" Executable="ai-manager" />
         
         
       </Extensions>

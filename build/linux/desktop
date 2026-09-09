@@ -1,13 +1,13 @@
 [Desktop Entry]
 Version=1.0
-Name=My Product
-Comment=A cpm_orc application
+Name=AI-Manager
+Comment=Cross-platform Agent Skills manager
 # The Exec line includes %u to pass the URL to the application
-Exec=/usr/local/bin/cpm_orc %u
+Exec=/usr/local/bin/ai-manager %u
 Terminal=false
 Type=Application
-Icon=cpm_orc
+Icon=ai-manager
 Categories=Utility;
-StartupWMClass=cpm_orc
+StartupWMClass=ai-manager
 
  

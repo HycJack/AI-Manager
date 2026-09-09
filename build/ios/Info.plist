@@ -3,13 +3,13 @@
 <plist version="1.0">
 <dict>
     <key>CFBundleExecutable</key>
-    <string>cpm_orc</string>
+    <string>ai-manager</string>
     <key>CFBundleIdentifier</key>
-    <string>com.example.cpmorc</string>
+    <string>io.hycjack.ai-manager</string>
     <key>CFBundleName</key>
-    <string>My Product</string>
+    <string>AI-Manager</string>
     <key>CFBundleDisplayName</key>
-    <string>My Product</string>
+    <string>AI-Manager</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
@@ -49,7 +49,7 @@
     
     
     <key>NSHumanReadableCopyright</key>
-    <string>© 2026, My Company</string>
+    <string>© 2026, HycJack</string>
     
     
     <key>CFBundleGetInfoString</key>

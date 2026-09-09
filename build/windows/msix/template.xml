@@ -8,27 +8,27 @@
         AllowPromptForPassword="false">
     </Settings>
     <Installer
-        Path="cpm_orc"
+        Path="ai-manager"
         Arguments=""
-        InstallLocation="C:\Program Files\My Company\My Product">
+        InstallLocation="C:\Program Files\HycJack\AI-Manager">
     </Installer>
     <PackageInformation
-        PackageName="My Product"
-        PackageDisplayName="My Product"
-        PublisherName="CN=My Company"
-        PublisherDisplayName="My Company"
+        PackageName="AI-Manager"
+        PackageDisplayName="AI-Manager"
+        PublisherName="CN=HycJack"
+        PublisherDisplayName="HycJack"
         Version="0.1.0.0"
-        PackageDescription="A cpm_orc application">
+        PackageDescription="Cross-platform Agent Skills manager">
         <Capabilities>
             <Capability Name="runFullTrust" />
             
         </Capabilities>
         <Applications>
             <Application
-                Id="com.example.cpmorc"
-                Description="A cpm_orc application"
-                DisplayName="My Product"
-                ExecutableName="cpm_orc"
+                Id="io.hycjack.ai-manager"
+                Description="Cross-platform Agent Skills manager"
+                DisplayName="AI-Manager"
+                ExecutableName="ai-manager"
                 EntryPoint="Windows.FullTrustApplication">
                 
             </Application>
@@ -41,13 +41,13 @@
         </Dependencies>
         <Properties>
             <Framework>false</Framework>
-            <DisplayName>My Product</DisplayName>
-            <PublisherDisplayName>My Company</PublisherDisplayName>
-            <Description>A cpm_orc application</Description>
+            <DisplayName>AI-Manager</DisplayName>
+            <PublisherDisplayName>HycJack</PublisherDisplayName>
+            <Description>Cross-platform Agent Skills manager</Description>
             <Logo>Assets\AppIcon.png</Logo>
         </Properties>
     </PackageInformation>
-    <SaveLocation PackagePath="cpm_orc.msix" />
+    <SaveLocation PackagePath="ai-manager.msix" />
     <PackageIntegrity>
         <CertificatePath></CertificatePath>
     </PackageIntegrity>
