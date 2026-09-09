@@ -143,7 +143,11 @@ jobs:
 
       - name: Install dependencies
         run: |
-          sudo apt-get update
+          # Retried: the runner image ships Google Chrome and Microsoft apt repos
+          # that occasionally return "Hash Sum mismatch", which makes apt-get
+          # update exit 100 and kill the step before any install runs. None of
+          # the packages below come from those repos.
+          sudo apt-get update || sudo apt-get update
           # libgtk-4-dev + libwebkitgtk-6.0-dev are needed by BOTH steps below:
           # `go install` compiles wails3's cgo operatingsystem package, and the
           # later `wails3 build` compiles the app itself.
