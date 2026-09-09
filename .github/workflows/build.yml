@@ -57,22 +57,36 @@ jobs:
         # desktop method is tag-gated and the flag would not change output.
         run: wails3 generate bindings -clean=true -time-type=Date -ts
 
-      - name: Build
-        run: wails3 build
+      - name: Build (universal)
+        # wails3 build emits a single-arch binary. build:universal lipo-merges
+        # amd64 + arm64 into bin/ai-manager, which is what the bundle below
+        # ships.
+        run: wails3 task darwin:build:universal
+
+      - name: Package (app bundle)
+        # `wails3 package` takes no flags in v3.0.0-beta.14: the platform comes
+        # from the runner's Taskfile. The old "wails3 package -platform darwin
+        # -arch universal" died with "flag provided but not defined: -platform"
+        # on every run, and continue-on-error hid it -- so no installer was
+        # ever actually built and the artifacts were silently empty.
+        run: wails3 task darwin:create:app:bundle
 
       - name: Package (DMG)
-        run: wails3 package -platform darwin -arch universal
-        continue-on-error: true
+        run: wails3 task darwin:create:dmg
 
-      - name: Upload artifact
+      - name: Upload binary
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: ai-manager-macos
-          # wails3 build emits the bare binary, not an .app -- that only
-          # exists after `wails3 package`, and not at bin/*.app. The old
-          # glob never matched, so this artifact was silently empty;
-          # upload-artifact@v4 defaults to warn, not fail.
           path: bin/ai-manager
+
+      - name: Upload app bundle
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-manager-macos-app
+          path: bin/ai-manager.app
 
       - name: Upload DMG
         if: always()
@@ -80,7 +94,6 @@ jobs:
         with:
           name: ai-manager-macos-dmg
           path: bin/*.dmg
-          if-no-files-found: ignore
 
   # ── Windows ────────────────────────────────────────────
   windows:
@@ -127,13 +140,16 @@ jobs:
         run: wails3 build
 
       - name: Package (NSIS)
-        run: wails3 package -platform windows
-        continue-on-error: true
+        # No -platform flag: it does not exist in v3.0.0-beta.14 and made this
+        # step fail every run. continue-on-error was hiding that failure.
+        run: wails3 package
 
       - name: Upload artifact
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: ai-manager-windows
+          # Matches both the raw bin/ai-manager.exe and the NSIS installer.
           path: bin/*.exe
 
   # ── Linux ──────────────────────────────────────────────
@@ -197,15 +213,20 @@ jobs:
       - name: Build
         run: wails3 build
 
-      - name: Package (AppImage)
-        run: wails3 package -platform linux
-        continue-on-error: true
+      - name: Package (AppImage + deb + rpm + AUR)
+        # No -platform flag: it does not exist in v3.0.0-beta.14 and made this
+        # step fail every run. continue-on-error was hiding that failure. The
+        # deb/rpm/AUR outputs come from `wails3 tool package` (nFPM, pure Go),
+        # so they need no dpkg/rpm toolchain on the runner.
+        run: wails3 package
 
-      - name: Upload artifact
+      - name: Upload artifacts
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: ai-manager-linux
-          path: bin/ai-manager
+          # Binary plus every package format: .AppImage, .deb, .rpm, AUR
+          path: bin/*
 
   # ── GitHub Release on tag ──────────────────────────────
   release:
