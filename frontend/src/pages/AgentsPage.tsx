@@ -10,7 +10,7 @@ import {
   ChevronRight,
   FileText,
   Pencil,
-  X,
+  Bot,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "@/lib/toast";
@@ -239,66 +239,85 @@ export default function AgentsPage() {
   );
 
   return (
-    <div className="flex h-full gap-4 min-h-0">
+    <div className="flex h-full gap-3 min-h-0">
       {/* Left: Agent list */}
-      <div className="flex w-52 shrink-0 flex-col gap-2 min-h-0">
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold">Agents</h2>
-          <button type="button" onClick={refresh} className="rounded-md p-1 text-muted-foreground hover:bg-secondary hover:text-foreground">
+      <aside className="flex w-56 shrink-0 flex-col gap-2 rounded-lg border bg-muted/20 p-2 min-h-0">
+        <div className="flex items-center justify-between px-1">
+          <h2 className="text-sm font-semibold tracking-tight">Agents</h2>
+          <button type="button" onClick={refresh} className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground" title="刷新">
             <RefreshCw className="h-3.5 w-3.5" />
           </button>
         </div>
 
         <div className="flex items-center gap-2 rounded-md bg-muted/50 px-2 py-1.5">
           <Switch checked={enableUnverified} onCheckedChange={toggleUnverified} className="scale-90" />
-          <span className="text-xs text-muted-foreground">未验证路径</span>
+          <span className="text-xs text-muted-foreground">显示未验证</span>
         </div>
 
-        <div className="flex-1 space-y-0.5 overflow-y-auto min-h-0">
+        <div className="flex-1 space-y-0.5 overflow-y-auto min-h-0 pr-1">
           {loading ? (
             <div className="flex items-center justify-center py-8">
               <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
             </div>
+          ) : agents.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-8 text-center">
+              <Bot className="h-8 w-8 text-muted-foreground/30 mb-2" />
+              <p className="text-xs text-muted-foreground">暂无可用 Agent</p>
+            </div>
           ) : (
-            agents.map((agent) => (
-              <button
-                key={agent.kind}
-                type="button"
-                onClick={() => selectAgent(agent)}
-                className={cn(
-                  "flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-sm text-left transition-colors hover:bg-secondary",
-                  selectedAgent?.kind === agent.kind && "bg-secondary font-medium"
-                )}
-              >
-                <AgentIcon iconType={agent.icon_type} className="h-4 w-4 shrink-0" />
-                <span className="flex-1 truncate">{agent.label}</span>
-                {agent.has_provider_config && <Settings2 className="h-3 w-3 text-primary" />}
-                {agent.has_sessions && <MessageSquare className="h-3 w-3 text-primary" />}
-                {agent.has_memory && <Brain className="h-3 w-3 text-primary" />}
-              </button>
-            ))
+            agents.map((agent) => {
+              const isActive = selectedAgent?.kind === agent.kind;
+              return (
+                <button
+                  key={agent.kind}
+                  type="button"
+                  onClick={() => selectAgent(agent)}
+                  className={cn(
+                    "flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-sm text-left transition-all duration-150",
+                    isActive
+                      ? "bg-primary/10 font-medium text-primary"
+                      : "hover:bg-secondary/50"
+                  )}
+                >
+                  <AgentIcon iconType={agent.icon_type} className="h-4 w-4 shrink-0" />
+                  <span className="flex-1 truncate">{agent.label}</span>
+                  <div className="flex gap-0.5">
+                    {agent.has_provider_config && <span className="h-1.5 w-1.5 rounded-full bg-primary/60" />}
+                    {agent.has_sessions && <span className="h-1.5 w-1.5 rounded-full bg-blue-400/60" />}
+                    {agent.has_memory && <span className="h-1.5 w-1.5 rounded-full bg-green-400/60" />}
+                  </div>
+                </button>
+              );
+            })
           )}
         </div>
-      </div>
+      </aside>
 
       {/* Right: Detail panel */}
       <div className="flex min-w-0 flex-1 flex-col min-h-0">
         {!selectedAgent ? (
-          <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-            选择一个 Agent 查看详情
+          <div className="flex h-full flex-col items-center justify-center text-muted-foreground">
+            <Bot className="h-12 w-12 mb-3 text-muted-foreground/20" />
+            <p className="text-sm">选择一个 Agent 查看详情</p>
+            <p className="text-xs mt-1 text-muted-foreground/60">查看 Provider 配置、会话记录和 Memory</p>
           </div>
         ) : (
           <>
             {/* Agent header */}
-            <div className="flex items-center gap-2 border-b pb-3">
-              <AgentIcon iconType={selectedAgent.icon_type} className="h-5 w-5" />
-              <h3 className="text-base font-semibold">{selectedAgent.label}</h3>
-              <Badge variant="secondary" className="text-xs">{selectedAgent.status}</Badge>
-              <div className="ml-auto flex gap-1">
-                <Button variant="ghost" size="sm" onClick={openPathConfig} className="h-7 gap-1 text-xs">
-                  <Pencil className="h-3 w-3" /> 路径配置
-                </Button>
+            <div className="flex items-center gap-3 border-b pb-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-muted">
+                <AgentIcon iconType={selectedAgent.icon_type} className="h-5 w-5" />
               </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <h3 className="text-base font-semibold truncate">{selectedAgent.label}</h3>
+                  <Badge variant="secondary" className="text-[10px] h-4 px-1.5">{selectedAgent.status}</Badge>
+                </div>
+                <p className="text-xs text-muted-foreground truncate">{selectedAgent.paths.provider_config_path}</p>
+              </div>
+              <Button variant="outline" size="sm" onClick={openPathConfig} className="h-7 gap-1.5 text-xs">
+                <Pencil className="h-3 w-3" /> 路径
+              </Button>
             </div>
 
             <Tabs value={tab} onValueChange={(v) => setTab(v as TabKey)} className="flex-1 min-h-0 flex flex-col">
