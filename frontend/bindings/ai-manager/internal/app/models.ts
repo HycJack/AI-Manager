@@ -7,7 +7,79 @@ import { Create as $Create } from "@wailsio/runtime";
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
+import * as agents$0 from "../agents/models.js";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
 import * as skill$0 from "../skill/models.js";
+
+/**
+ * AgentInfo is the frontend-facing view of an agent with its paths and
+ * capability flags.
+ */
+export class AgentInfo {
+    "kind": agents$0.AgentKind;
+    "label": string;
+    "icon_type": string;
+    "paths": agents$0.AgentPaths;
+    "supports_provider": boolean;
+    "supports_session": boolean;
+    "supports_memory": boolean;
+    "status": agents$0.PathStatus;
+    "has_provider_config": boolean;
+    "has_sessions": boolean;
+    "has_memory": boolean;
+
+    /** Creates a new AgentInfo instance. */
+    constructor($$source: Partial<AgentInfo> = {}) {
+        if (!("kind" in $$source)) {
+            this["kind"] = agents$0.AgentKind.$zero;
+        }
+        if (!("label" in $$source)) {
+            this["label"] = "";
+        }
+        if (!("icon_type" in $$source)) {
+            this["icon_type"] = "";
+        }
+        if (!("paths" in $$source)) {
+            this["paths"] = (new agents$0.AgentPaths());
+        }
+        if (!("supports_provider" in $$source)) {
+            this["supports_provider"] = false;
+        }
+        if (!("supports_session" in $$source)) {
+            this["supports_session"] = false;
+        }
+        if (!("supports_memory" in $$source)) {
+            this["supports_memory"] = false;
+        }
+        if (!("status" in $$source)) {
+            this["status"] = agents$0.PathStatus.$zero;
+        }
+        if (!("has_provider_config" in $$source)) {
+            this["has_provider_config"] = false;
+        }
+        if (!("has_sessions" in $$source)) {
+            this["has_sessions"] = false;
+        }
+        if (!("has_memory" in $$source)) {
+            this["has_memory"] = false;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new AgentInfo instance from a string or object.
+     */
+    static createFrom($$source: any = {}): AgentInfo {
+        const $$createField3_0 = $$createType0;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("paths" in $$parsedSource) {
+            $$parsedSource["paths"] = $$createField3_0($$parsedSource["paths"]);
+        }
+        return new AgentInfo($$parsedSource as Partial<AgentInfo>);
+    }
+}
 
 /**
  * ConfigInfo is the subset of config fields exposed to the frontend.
@@ -63,6 +135,169 @@ export class ConfigUpdate {
 }
 
 /**
+ * CustomAgentPaths holds user-configured path overrides for a single agent.
+ */
+export class CustomAgentPaths {
+    "provider_config_path"?: string;
+    "session_root_path"?: string;
+    "session_format"?: string;
+    "memory_root_path"?: string;
+    "memory_format"?: string;
+
+    /** Creates a new CustomAgentPaths instance. */
+    constructor($$source: Partial<CustomAgentPaths> = {}) {
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new CustomAgentPaths instance from a string or object.
+     */
+    static createFrom($$source: any = {}): CustomAgentPaths {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new CustomAgentPaths($$parsedSource as Partial<CustomAgentPaths>);
+    }
+}
+
+/**
+ * DiscoverableSkill represents a skill found via search that can be installed.
+ */
+export class DiscoverableSkill {
+    "key": string;
+    "name": string;
+    "source": string;
+    "repoOwner": string;
+    "repoName": string;
+    "repoBranch": string;
+    "installs": number;
+    "readmeUrl": string;
+
+    /** Creates a new DiscoverableSkill instance. */
+    constructor($$source: Partial<DiscoverableSkill> = {}) {
+        if (!("key" in $$source)) {
+            this["key"] = "";
+        }
+        if (!("name" in $$source)) {
+            this["name"] = "";
+        }
+        if (!("source" in $$source)) {
+            this["source"] = "";
+        }
+        if (!("repoOwner" in $$source)) {
+            this["repoOwner"] = "";
+        }
+        if (!("repoName" in $$source)) {
+            this["repoName"] = "";
+        }
+        if (!("repoBranch" in $$source)) {
+            this["repoBranch"] = "";
+        }
+        if (!("installs" in $$source)) {
+            this["installs"] = 0;
+        }
+        if (!("readmeUrl" in $$source)) {
+            this["readmeUrl"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new DiscoverableSkill instance from a string or object.
+     */
+    static createFrom($$source: any = {}): DiscoverableSkill {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new DiscoverableSkill($$parsedSource as Partial<DiscoverableSkill>);
+    }
+}
+
+/**
+ * ExternalSkill represents a skill installed in an agent directory but not
+ * managed by the AI-Manager library. It shows which agents have it and
+ * allows the user to register it or associate it with other agents.
+ */
+export class ExternalSkill {
+    "name": string;
+    "slug": string;
+    "description": string;
+    "sourceDir": string;
+    "canonical": string;
+
+    /**
+     * agent key -> true if skill exists in that agent's dir
+     */
+    "agents": { [_ in string]?: boolean };
+
+    /** Creates a new ExternalSkill instance. */
+    constructor($$source: Partial<ExternalSkill> = {}) {
+        if (!("name" in $$source)) {
+            this["name"] = "";
+        }
+        if (!("slug" in $$source)) {
+            this["slug"] = "";
+        }
+        if (!("description" in $$source)) {
+            this["description"] = "";
+        }
+        if (!("sourceDir" in $$source)) {
+            this["sourceDir"] = "";
+        }
+        if (!("canonical" in $$source)) {
+            this["canonical"] = "";
+        }
+        if (!("agents" in $$source)) {
+            this["agents"] = {};
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new ExternalSkill instance from a string or object.
+     */
+    static createFrom($$source: any = {}): ExternalSkill {
+        const $$createField5_0 = $$createType1;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("agents" in $$parsedSource) {
+            $$parsedSource["agents"] = $$createField5_0($$parsedSource["agents"]);
+        }
+        return new ExternalSkill($$parsedSource as Partial<ExternalSkill>);
+    }
+}
+
+/**
+ * GitHubSearchResult is the result of searching GitHub for skill repositories.
+ */
+export class GitHubSearchResult {
+    "items": {"full_name": string, "html_url": string, "description": string, "stargazers_count": number}[];
+    "total_count": number;
+
+    /** Creates a new GitHubSearchResult instance. */
+    constructor($$source: Partial<GitHubSearchResult> = {}) {
+        if (!("items" in $$source)) {
+            this["items"] = [];
+        }
+        if (!("total_count" in $$source)) {
+            this["total_count"] = 0;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new GitHubSearchResult instance from a string or object.
+     */
+    static createFrom($$source: any = {}): GitHubSearchResult {
+        const $$createField0_0 = $$createType2;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("items" in $$parsedSource) {
+            $$parsedSource["items"] = $$createField0_0($$parsedSource["items"]);
+        }
+        return new GitHubSearchResult($$parsedSource as Partial<GitHubSearchResult>);
+    }
+}
+
+/**
  * Group is the API-level group representation.
  */
 export class Group {
@@ -89,7 +324,7 @@ export class Group {
      * Creates a new Group instance from a string or object.
      */
     static createFrom($$source: any = {}): Group {
-        const $$createField2_0 = $$createType0;
+        const $$createField2_0 = $$createType3;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("skills" in $$parsedSource) {
             $$parsedSource["skills"] = $$createField2_0($$parsedSource["skills"]);
@@ -207,8 +442,8 @@ export class SearchOptions {
      * Creates a new SearchOptions instance from a string or object.
      */
     static createFrom($$source: any = {}): SearchOptions {
-        const $$createField1_0 = $$createType0;
-        const $$createField2_0 = $$createType0;
+        const $$createField1_0 = $$createType3;
+        const $$createField2_0 = $$createType3;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("fileTypes" in $$parsedSource) {
             $$parsedSource["fileTypes"] = $$createField1_0($$parsedSource["fileTypes"]);
@@ -254,6 +489,114 @@ export class SearchResult {
 }
 
 /**
+ * SessionFilter filters sessions by project and/or time.
+ */
+export class SessionFilter {
+    "project": string;
+
+    /**
+     * ISO 8601 timestamp (empty = no filter)
+     */
+    "since": string;
+
+    /**
+     * default 50
+     */
+    "limit": number;
+
+    /** Creates a new SessionFilter instance. */
+    constructor($$source: Partial<SessionFilter> = {}) {
+        if (!("project" in $$source)) {
+            this["project"] = "";
+        }
+        if (!("since" in $$source)) {
+            this["since"] = "";
+        }
+        if (!("limit" in $$source)) {
+            this["limit"] = 0;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new SessionFilter instance from a string or object.
+     */
+    static createFrom($$source: any = {}): SessionFilter {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new SessionFilter($$parsedSource as Partial<SessionFilter>);
+    }
+}
+
+/**
+ * SkillAgentStatus represents a Library skill with its agent installation status.
+ */
+export class SkillAgentStatus {
+    "name": string;
+    "slug": string;
+    "version": string;
+    "description": string;
+    "sourceDir": string;
+
+    /**
+     * "local", "github", "skills.sh"
+     */
+    "origin": string;
+
+    /**
+     * true if a newer version is available
+     */
+    "hasUpdate": boolean;
+
+    /**
+     * agent key -> installed (symlink exists)
+     */
+    "agents": { [_ in string]?: boolean };
+
+    /** Creates a new SkillAgentStatus instance. */
+    constructor($$source: Partial<SkillAgentStatus> = {}) {
+        if (!("name" in $$source)) {
+            this["name"] = "";
+        }
+        if (!("slug" in $$source)) {
+            this["slug"] = "";
+        }
+        if (!("version" in $$source)) {
+            this["version"] = "";
+        }
+        if (!("description" in $$source)) {
+            this["description"] = "";
+        }
+        if (!("sourceDir" in $$source)) {
+            this["sourceDir"] = "";
+        }
+        if (!("origin" in $$source)) {
+            this["origin"] = "";
+        }
+        if (!("hasUpdate" in $$source)) {
+            this["hasUpdate"] = false;
+        }
+        if (!("agents" in $$source)) {
+            this["agents"] = {};
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new SkillAgentStatus instance from a string or object.
+     */
+    static createFrom($$source: any = {}): SkillAgentStatus {
+        const $$createField7_0 = $$createType1;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("agents" in $$parsedSource) {
+            $$parsedSource["agents"] = $$createField7_0($$parsedSource["agents"]);
+        }
+        return new SkillAgentStatus($$parsedSource as Partial<SkillAgentStatus>);
+    }
+}
+
+/**
  * SkillDetail is the full detail returned by GetSkill, including the
  * underlying record, file list, and readme content.
  */
@@ -281,8 +624,8 @@ export class SkillDetail {
      * Creates a new SkillDetail instance from a string or object.
      */
     static createFrom($$source: any = {}): SkillDetail {
-        const $$createField0_0 = $$createType1;
-        const $$createField1_0 = $$createType0;
+        const $$createField0_0 = $$createType4;
+        const $$createField1_0 = $$createType3;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("record" in $$parsedSource) {
             $$parsedSource["record"] = $$createField0_0($$parsedSource["record"]);
@@ -339,6 +682,42 @@ export class SkillSummary {
 }
 
 /**
+ * SkillsShSearchResult is the result of searching skills.sh.
+ */
+export class SkillsShSearchResult {
+    "skills": DiscoverableSkill[];
+    "totalCount": number;
+    "query": string;
+
+    /** Creates a new SkillsShSearchResult instance. */
+    constructor($$source: Partial<SkillsShSearchResult> = {}) {
+        if (!("skills" in $$source)) {
+            this["skills"] = [];
+        }
+        if (!("totalCount" in $$source)) {
+            this["totalCount"] = 0;
+        }
+        if (!("query" in $$source)) {
+            this["query"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new SkillsShSearchResult instance from a string or object.
+     */
+    static createFrom($$source: any = {}): SkillsShSearchResult {
+        const $$createField0_0 = $$createType6;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("skills" in $$parsedSource) {
+            $$parsedSource["skills"] = $$createField0_0($$parsedSource["skills"]);
+        }
+        return new SkillsShSearchResult($$parsedSource as Partial<SkillsShSearchResult>);
+    }
+}
+
+/**
  * UpdateInfo describes a skill update check result.
  */
 export class UpdateInfo {
@@ -371,5 +750,10 @@ export class UpdateInfo {
 }
 
 // Private type creation functions
-const $$createType0 = $Create.Array($Create.Any);
-const $$createType1 = skill$0.Record.createFrom;
+const $$createType0 = agents$0.AgentPaths.createFrom;
+const $$createType1 = $Create.Map($Create.Any, $Create.Any);
+const $$createType2 = $Create.Array($Create.Any);
+const $$createType3 = $Create.Array($Create.Any);
+const $$createType4 = skill$0.Record.createFrom;
+const $$createType5 = DiscoverableSkill.createFrom;
+const $$createType6 = $Create.Array($$createType5);

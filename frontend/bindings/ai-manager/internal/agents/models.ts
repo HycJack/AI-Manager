@@ -6,6 +6,207 @@
 import { Create as $Create } from "@wailsio/runtime";
 
 /**
+ * AgentConfig defines a single agent entry in the configuration file.
+ */
+export class AgentConfig {
+    /**
+     * unique identifier (e.g. "claude-code")
+     */
+    "key": string;
+
+    /**
+     * display name (e.g. "Claude Code")
+     */
+    "label": string;
+
+    /**
+     * skill directory path template, {home} = user home
+     */
+    "path": string;
+
+    /**
+     * IconType is a string key for the frontend to pick the right icon.
+     * Frontend maps this to a Lucide icon or inline SVG.
+     */
+    "iconType": string;
+
+    /**
+     * CSS class for active state
+     */
+    "colorClass": string;
+
+    /** Creates a new AgentConfig instance. */
+    constructor($$source: Partial<AgentConfig> = {}) {
+        if (!("key" in $$source)) {
+            this["key"] = "";
+        }
+        if (!("label" in $$source)) {
+            this["label"] = "";
+        }
+        if (!("path" in $$source)) {
+            this["path"] = "";
+        }
+        if (!("iconType" in $$source)) {
+            this["iconType"] = "";
+        }
+        if (!("colorClass" in $$source)) {
+            this["colorClass"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new AgentConfig instance from a string or object.
+     */
+    static createFrom($$source: any = {}): AgentConfig {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new AgentConfig($$parsedSource as Partial<AgentConfig>);
+    }
+}
+
+/**
+ * AgentConfigFile is the root of the agents.json config file.
+ */
+export class AgentConfigFile {
+    "agents": AgentConfig[];
+
+    /** Creates a new AgentConfigFile instance. */
+    constructor($$source: Partial<AgentConfigFile> = {}) {
+        if (!("agents" in $$source)) {
+            this["agents"] = [];
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new AgentConfigFile instance from a string or object.
+     */
+    static createFrom($$source: any = {}): AgentConfigFile {
+        const $$createField0_0 = $$createType1;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("agents" in $$parsedSource) {
+            $$parsedSource["agents"] = $$createField0_0($$parsedSource["agents"]);
+        }
+        return new AgentConfigFile($$parsedSource as Partial<AgentConfigFile>);
+    }
+}
+
+/**
+ * AgentKind identifies a specific agent runtime.
+ */
+export enum AgentKind {
+    /**
+     * The Go zero value for the underlying type of the enum.
+     */
+    $zero = "",
+
+    AgentUniversal = "universal",
+    AgentClaudeCode = "claude-code",
+    AgentCodex = "codex",
+    AgentCursor = "cursor",
+    AgentOpenCode = "opencode",
+    AgentPi = "pi",
+    AgentGrok = "grok",
+    AgentAntigravity = "antigravity",
+    AgentDroid = "droid",
+    AgentCopilot = "copilot",
+    AgentHermes = "hermes",
+    AgentCcSwitch = "cc-switch",
+
+    /**
+     * Agents added for provider/session/memory integration (T12+).
+     * Source: docs/agents/memory-session-paths.md (verified 2026-09-11).
+     */
+    AgentGemini = "gemini",
+    AgentContinue = "continue",
+    AgentCline = "cline",
+    AgentWindsurf = "windsurf",
+    AgentOpenClaw = "openclaw",
+    AgentKiro = "kiro",
+    AgentAmp = "amp",
+    AgentGoose = "goose",
+    AgentRooCode = "roo-code",
+};
+
+/**
+ * AgentPaths describes the on-disk persistence locations for a single agent.
+ * All paths use {home}, {project}, {state_dir}, {data_dir} placeholders that
+ * are resolved at runtime by ResolveAgentPaths.
+ * 
+ * Source: docs/agents/memory-session-paths.md (verified 2026-09-11).
+ */
+export class AgentPaths {
+    /**
+     * ProviderConfigPath is the agent's provider configuration entry point.
+     * Empty if the agent has no local provider config (server-side, VS Code
+     * settings, etc.).
+     */
+    "provider_config_path": string;
+
+    /**
+     * SessionRootPath is the root directory (or file) for session data.
+     * Empty if the agent has no local session storage.
+     */
+    "session_root_path": string;
+
+    /**
+     * SessionFormat describes how session files are organized.
+     */
+    "session_format": SessionFormat;
+
+    /**
+     * MemoryRootPath is the root directory (or file) for memory data.
+     * Empty if the agent has no memory feature.
+     */
+    "memory_root_path": string;
+
+    /**
+     * MemoryFormat describes the memory data format.
+     */
+    "memory_format": MemoryFormat;
+
+    /**
+     * Status indicates whether the paths are verified, unverified, or
+     * not supported.
+     */
+    "status": PathStatus;
+
+    /** Creates a new AgentPaths instance. */
+    constructor($$source: Partial<AgentPaths> = {}) {
+        if (!("provider_config_path" in $$source)) {
+            this["provider_config_path"] = "";
+        }
+        if (!("session_root_path" in $$source)) {
+            this["session_root_path"] = "";
+        }
+        if (!("session_format" in $$source)) {
+            this["session_format"] = SessionFormat.$zero;
+        }
+        if (!("memory_root_path" in $$source)) {
+            this["memory_root_path"] = "";
+        }
+        if (!("memory_format" in $$source)) {
+            this["memory_format"] = MemoryFormat.$zero;
+        }
+        if (!("status" in $$source)) {
+            this["status"] = PathStatus.$zero;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new AgentPaths instance from a string or object.
+     */
+    static createFrom($$source: any = {}): AgentPaths {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new AgentPaths($$parsedSource as Partial<AgentPaths>);
+    }
+}
+
+/**
  * InstallTarget identifies a skill installation directory within a project.
  */
 export enum InstallTarget {
@@ -24,4 +225,130 @@ export enum InstallTarget {
     TargetAntigravity = "antigravity",
     TargetDroid = "droid",
     TargetCopilot = "copilot",
+    TargetHermes = "hermes",
+    TargetCcSwitch = "cc-switch",
 };
+
+/**
+ * MemoryFormat describes how an agent stores its persistent memory.
+ */
+export enum MemoryFormat {
+    /**
+     * The Go zero value for the underlying type of the enum.
+     */
+    $zero = "",
+
+    /**
+     * MemoryFormatMarkdownIndex: memory is a MEMORY.md index with
+     * [[topic]] links to topic files (Claude Code, OpenClaw, Kiro,
+     * Gemini CLI).
+     */
+    MemoryFormatMarkdownIndex = "markdown-index",
+
+    /**
+     * MemoryFormatSQLite: memory is stored in a SQLite database
+     * (Codex, Kiro FTS5).
+     */
+    MemoryFormatSQLite = "sqlite",
+
+    /**
+     * MemoryFormatMarkdownFlat: memory is a single Markdown file
+     * (Windsurf: global_rules.md).
+     */
+    MemoryFormatMarkdownFlat = "markdown-flat",
+
+    /**
+     * MemoryFormatRulesOnly: the agent has no native memory; persistent
+     * context is provided via Rules files (Cursor, Cline, Tabnine).
+     */
+    MemoryFormatRulesOnly = "rules-only",
+
+    /**
+     * MemoryFormatServerSide: memory is stored server-side, not on
+     * local disk (Copilot, Amp).
+     */
+    MemoryFormatServerSide = "server-side",
+
+    /**
+     * MemoryFormatNone: the agent has no memory feature
+     * (Continue, OpenCode, DeepSeek).
+     */
+    MemoryFormatNone = "none",
+};
+
+/**
+ * PathStatus indicates whether an agent's paths are verified against
+ * official documentation.
+ */
+export enum PathStatus {
+    /**
+     * The Go zero value for the underlying type of the enum.
+     */
+    $zero = "",
+
+    /**
+     * PathStatusVerified: paths are verified against official docs or
+     * source code (docs/agents/memory-session-paths.md, verified
+     * 2026-09-11).
+     */
+    PathStatusVerified = "verified",
+
+    /**
+     * PathStatusUnverified: paths are community-confirmed or plausible
+     * but not found in official documentation. Opt-in via
+     * EnableUnverifiedAgentPaths.
+     */
+    PathStatusUnverified = "unverified",
+
+    /**
+     * PathStatusNotSupported: the agent does not have local
+     * provider/session/memory paths (server-side, cloud-managed, or
+     * not in the docs).
+     */
+    PathStatusNotSupported = "not-supported",
+};
+
+/**
+ * SessionFormat describes how an agent organizes its session files.
+ */
+export enum SessionFormat {
+    /**
+     * The Go zero value for the underlying type of the enum.
+     */
+    $zero = "",
+
+    /**
+     * SessionFormatJSONLPerProject: sessions are JSONL files under
+     * <root>/<encoded-project-path>/*.jsonl (Claude Code, Codex).
+     */
+    SessionFormatJSONLPerProject = "jsonl-per-project",
+
+    /**
+     * SessionFormatSQLiteGlobal: all sessions share one global SQLite DB
+     * (OpenCode, Windsurf, Goose, OpenClaw, Kiro).
+     */
+    SessionFormatSQLiteGlobal = "sqlite-global",
+
+    /**
+     * SessionFormatJSONFlat: sessions are independent JSON files under
+     * <root>/*.json (Gemini CLI, Continue).
+     */
+    SessionFormatJSONFlat = "json-flat",
+
+    /**
+     * SessionFormatVSCodeStorage: sessions live inside the IDE's
+     * workspaceStorage SQLite (Cursor, Copilot, Cline, Roo Code).
+     * Opt-in via EnableUnverifiedAgentPaths.
+     */
+    SessionFormatVSCodeStorage = "vscode-storage",
+
+    /**
+     * SessionFormatNone: the agent does not store local session files
+     * (Amp is server-side; Replit AI is cloud-managed).
+     */
+    SessionFormatNone = "none",
+};
+
+// Private type creation functions
+const $$createType0 = AgentConfig.createFrom;
+const $$createType1 = $Create.Array($$createType0);

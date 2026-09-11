@@ -3,6 +3,7 @@ package main
 import (
 	"embed"
 	"log"
+	"runtime"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 
@@ -60,6 +61,9 @@ func main() {
 			// Tag and group management: two-level tag tree, group CRUD,
 			// skill↔tag assignment, persisted to tags.json.
 			application.NewService(app.NewTagGroupService(state)),
+			// Agent provider config, session list, and memory views.
+			// Source: docs/agents/memory-session-paths.md (verified 2026-09-11).
+			application.NewService(app.NewAgentService(state)),
 		},
 		// Single instance: a second launch brings the existing window to the
 		// front instead of starting a new process.
@@ -85,9 +89,11 @@ func main() {
 		Title:  cfg.AppName,
 		Width:  1000,
 		Height: 700,
-		// Frameless on every platform: the in-app <header> (with the
+		// Frameless on Windows/Linux: the in-app <header> (with the
 		// app-region: drag CSS) becomes the title bar.
-		Frameless: true,
+		// On macOS, Frameless must be false so native traffic lights are shown;
+		// MacTitleBarHiddenInset handles the hidden-title-bar look.
+		Frameless: runtime.GOOS != "darwin",
 		Mac: application.MacWindow{
 			InvisibleTitleBarHeight: 50,
 			Backdrop:                application.MacBackdropTranslucent,

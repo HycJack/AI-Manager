@@ -23,11 +23,21 @@ type Library struct {
 	registry   *config.Registry
 }
 
-// NewLibrary creates a Library rooted at the given data directory. The registry
-// is loaded from disk if it exists; otherwise an empty registry is created.
+// NewLibrary creates a Library. If dataDir is provided, uses it as the root
+// (for testing). Otherwise defaults to ~/.aimanager/.
 func NewLibrary(dataDir string) (*Library, error) {
-	skillsDir := filepath.Join(dataDir, "library", "skills")
-	registryPath := filepath.Join(dataDir, "library", "registry.json")
+	var libRoot string
+	if dataDir != "" {
+		libRoot = dataDir
+	} else {
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return nil, fmt.Errorf("get home dir: %w", err)
+		}
+		libRoot = filepath.Join(home, ".aimanager")
+	}
+	skillsDir := filepath.Join(libRoot, "skills")
+	registryPath := filepath.Join(libRoot, "registry.json")
 
 	if err := os.MkdirAll(skillsDir, 0o755); err != nil {
 		return nil, fmt.Errorf("create skills dir: %w", err)
@@ -39,7 +49,7 @@ func NewLibrary(dataDir string) (*Library, error) {
 	}
 
 	return &Library{
-		dataDir:      dataDir,
+		dataDir:      libRoot,
 		skillsDir:    skillsDir,
 		registryPath: registryPath,
 		registry:     reg,
@@ -62,8 +72,10 @@ func (l *Library) SkillDir() string {
 }
 
 // ScanLocal scans a local folder for skill directories. A skill directory is
-// any subdirectory containing a SKILL.md or README.md file. Returns the
-// discovered SkillRecords.
+// any directory containing a SKILL.md file. The root itself may be a skill
+// directory; if so, it is returned as a single record. Otherwise, the root is
+// walked for subdirectories that contain SKILL.md. Returns the discovered
+// SkillRecords, or an error if no skill directory is found.
 func (l *Library) ScanLocal(root string) ([]Record, error) {
 	root = filepath.Clean(root)
 	info, err := os.Stat(root)
@@ -74,6 +86,14 @@ func (l *Library) ScanLocal(root string) ([]Record, error) {
 		return nil, fmt.Errorf("scan local: %s is not a directory", root)
 	}
 
+	// If the root itself is a skill directory (contains SKILL.md), return it
+	// as a single record. This handles the common case where the user picks
+	// a single skill folder directly.
+	if _, err := os.Stat(filepath.Join(root, "SKILL.md")); err == nil {
+		return []Record{l.makeRecordFromDir(root)}, nil
+	}
+
+	// Root is not a skill; walk subdirectories for skill folders.
 	var records []Record
 	err = filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
@@ -83,52 +103,62 @@ func (l *Library) ScanLocal(root string) ([]Record, error) {
 			return nil
 		}
 
-		// Check if this directory has a SKILL.md or README.md
-		hasReadme := false
-		for _, name := range []string{"SKILL.md", "README.md"} {
-			if _, err := os.Stat(filepath.Join(path, name)); err == nil {
-				hasReadme = true
-				break
-			}
-		}
-		if !hasReadme {
+		// Check if this directory has a SKILL.md
+		if _, err := os.Stat(filepath.Join(path, "SKILL.md")); err != nil {
 			return nil // not a skill directory
 		}
 
-		name := filepath.Base(path)
-		slug := slugify(name)
-
-		rec := Record{
-			ID:        hashString(name),
-			Name:      titleCase(name),
-			Slug:      slug,
-			Version:   "1.0.0",
-			Origin:    Origin{Type: OriginLocal, Path: path},
-			Installed: true,
-			UpdatedAt: time.Now().UTC(),
-		}
-
-		// Try to load metadata.json if it exists
-		if meta, err := LoadMetadata(path); err == nil {
-			rec.Authors = meta.Authors
-			rec.License = meta.License
-			rec.Keywords = meta.Keywords
-			rec.Tags = meta.Tags
-			if meta.Version != "" {
-				rec.Version = meta.Version
-			}
-			if meta.ID != "" {
-				rec.ID = meta.ID
-			}
-		}
-
-		records = append(records, rec)
+		records = append(records, l.makeRecordFromDir(path))
 		return nil
 	})
 	if err != nil {
 		return nil, fmt.Errorf("walk %s: %w", root, err)
 	}
+
+	if len(records) == 0 {
+		return nil, fmt.Errorf("scan local: no SKILL.md found in %s", root)
+	}
+
 	return records, nil
+}
+
+// makeRecordFromDir builds a SkillRecord from a directory that contains a
+// SKILL.md file. It tries to load metadata.json for additional fields.
+func (l *Library) makeRecordFromDir(path string) Record {
+	name := filepath.Base(path)
+	slug := slugify(name)
+
+	rec := Record{
+		ID:        hashString(name),
+		Name:      titleCase(name),
+		Slug:      slug,
+		Version:   "1.0.0",
+		Origin:    Origin{Type: OriginLocal, Path: path},
+		Installed: true,
+		UpdatedAt: time.Now().UTC(),
+	}
+
+	if meta, err := LoadMetadata(path); err == nil {
+		rec.Authors = meta.Authors
+		rec.License = meta.License
+		rec.Keywords = meta.Keywords
+		rec.Tags = meta.Tags
+		if meta.Version != "" {
+			rec.Version = meta.Version
+		}
+		if meta.ID != "" {
+			rec.ID = meta.ID
+		}
+	}
+
+	// Fallback: try to parse version from SKILL.md frontmatter.
+	if rec.Version == "1.0.0" {
+		if v := parseSkillFrontmatterVersion(path); v != "" {
+			rec.Version = v
+		}
+	}
+
+	return rec
 }
 
 // ScanNpx resolves an npx / skills.sh / GitHub package name to SkillRecords.
@@ -285,7 +315,64 @@ func (l *Library) AddRecord(rec Record) error {
 		return fmt.Errorf("write metadata: %w", err)
 	}
 
+	// Copy skill files from source to library so the library holds the
+	// complete skill (not just metadata.json). This makes the library the
+	// single source of truth as described in CONTEXT.md.
+	if rec.Origin.Path != "" {
+		if srcInfo, err := os.Stat(rec.Origin.Path); err == nil && srcInfo.IsDir() {
+			if err := copyDirContents(rec.Origin.Path, skillPath); err != nil {
+				return fmt.Errorf("copy skill files: %w", err)
+			}
+		}
+	}
+
 	return l.Save()
+}
+
+// copyDirContents copies all files and subdirectories from src to dst,
+// preserving the directory structure. It skips metadata.json at the root
+// level (the library writes its own). Returns an error if any file cannot
+// be copied.
+func copyDirContents(src, dst string) error {
+	return filepath.WalkDir(src, func(path string, d os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		rel, err := filepath.Rel(src, path)
+		if err != nil {
+			return err
+		}
+		if rel == "." {
+			return nil // skip the root itself
+		}
+		// Skip metadata.json at the root level (library writes its own)
+		if d.Type().IsRegular() && rel == "metadata.json" {
+			return nil
+		}
+		dstPath := filepath.Join(dst, rel)
+		if d.IsDir() {
+			if err := os.MkdirAll(dstPath, 0o755); err != nil {
+				return fmt.Errorf("create dir %s: %w", dstPath, err)
+			}
+			return nil
+		}
+		// Copy regular files
+		info, err := d.Info()
+		if err != nil {
+			return err
+		}
+		data, err := os.ReadFile(path)
+		if err != nil {
+			return fmt.Errorf("read %s: %w", path, err)
+		}
+		if err := os.MkdirAll(filepath.Dir(dstPath), 0o755); err != nil {
+			return fmt.Errorf("create parent dir: %w", err)
+		}
+		if err := os.WriteFile(dstPath, data, info.Mode()); err != nil {
+			return fmt.Errorf("write %s: %w", dstPath, err)
+		}
+		return nil
+	})
 }
 
 // RemoveRecord removes a skill record from the library by name.
@@ -325,16 +412,99 @@ func (l *Library) FindSkill(name string) (config.SkillEntry, bool) {
 func (l *Library) ListSkills() []Summary {
 	summaries := make([]Summary, 0, len(l.registry.Skills))
 	for _, entry := range l.registry.Skills {
+		// Try to load description from SKILL.md
+		var desc string
+		if entry.Path != "" {
+			desc = ParseSkillFrontmatterDescription(entry.Path)
+		}
 		summaries = append(summaries, Summary{
 			ID:        entry.ID,
 			Name:      entry.Name,
 			Slug:      entry.Slug,
 			Version:   entry.Version,
+			Description: desc,
 			Installed: entry.Installed,
 			UpdatedAt: time.Now().UTC(),
 		})
 	}
 	return summaries
+}
+
+// RescanAndRegister scans the skills directory for unregistered skills and
+// adds them to the registry. Also cleans up empty entries from previous runs.
+func (l *Library) RescanAndRegister() (int, error) {
+	// First, clean up empty entries (no slug or name)
+	cleaned := l.registry.Skills[:0]
+	for _, entry := range l.registry.Skills {
+		if entry.Slug != "" && entry.Name != "" {
+			cleaned = append(cleaned, entry)
+		}
+	}
+	l.registry.Skills = cleaned
+
+	entries, err := os.ReadDir(l.skillsDir)
+	if err != nil {
+		return 0, nil
+	}
+
+	added := 0
+	for _, entry := range entries {
+		if !entry.IsDir() || entry.Name() == "." || entry.Name() == ".." {
+			continue
+		}
+		skillDir := filepath.Join(l.skillsDir, entry.Name())
+
+		hasManifest := false
+		for _, name := range []string{"SKILL.md", "README.md"} {
+			if _, err := os.Stat(filepath.Join(skillDir, name)); err == nil {
+				hasManifest = true
+				break
+			}
+		}
+		if !hasManifest {
+			continue
+		}
+
+		// Check if already registered (by slug or name matching dir name)
+		dirName := entry.Name()
+		found := false
+		for _, reg := range l.registry.Skills {
+			if strings.EqualFold(reg.Slug, dirName) || strings.EqualFold(reg.Name, dirName) {
+				found = true
+				break
+			}
+		}
+		if found {
+			continue
+		}
+
+		// Load metadata if available, otherwise create a minimal record
+		rec, _ := LoadMetadata(skillDir)
+		if rec == nil || rec.Name == "" || rec.Slug == "" {
+			rec = &Record{
+				ID:      entry.Name(),
+				Slug:    entry.Name(),
+				Name:    entry.Name(),
+				Version: "0.0.0",
+			}
+		}
+
+		// Directly add to registry without writing metadata.json
+		l.registry.Skills = append(l.registry.Skills, config.SkillEntry{
+			ID:        rec.ID,
+			Name:      rec.Name,
+			Slug:      rec.Slug,
+			Version:   rec.Version,
+			Installed: true,
+			Path:      skillDir,
+		})
+		added++
+	}
+
+	if added > 0 {
+		_ = l.Save()
+	}
+	return added, nil
 }
 
 // LoadSkillRecord loads the full Record from the metadata.json of a skill.

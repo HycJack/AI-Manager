@@ -12,12 +12,14 @@ import {
   Languages,
   ExternalLink,
   Sparkles,
+  Layers,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { usePreferencesStore } from "@/modules/settings/store";
 import { useI18n } from "@/modules/i18n";
 import { useTheme, listBuiltinThemes, type ThemeColors } from "@/modules/theme";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
@@ -35,6 +37,8 @@ import { GetInfo } from "@bindings/ai-manager/internal/app/versionservice";
 import { CheckForUpdates, CheckAndInstall, Restart, UpdateState } from "@bindings/ai-manager/internal/app/updateservice";
 import { IsEnabled as IsAutostartEnabled, SetEnabled as SetAutostartEnabled } from "@bindings/ai-manager/internal/app/autostartservice";
 import { GetConfig, UpdateConfig, BrowseLibrary, RescanLibrary } from "@bindings/ai-manager/internal/app/configservice";
+import { GetAgentConfig, SaveAgentConfig } from "@bindings/ai-manager/internal/app/skillservice";
+import { Plus, Trash2, Pencil, Save } from "lucide-react";
 
 // Built from the upstream projects this template abstracts. Opens in the
 // browser via the OS default handler — passed to window.open as a plain link.
@@ -82,6 +86,10 @@ export default function SettingsPage() {
             <Folder className="h-4 w-4" />
             {t("settings.tab.library")}
           </TabsTrigger>
+          <TabsTrigger value="agents" className="flex-1 gap-1.5">
+            <Layers className="h-4 w-4" />
+            Agents
+          </TabsTrigger>
           <TabsTrigger value="about" className="flex-1 gap-1.5">
             <Info className="h-4 w-4" />
             {t("settings.tab.about")}
@@ -96,6 +104,9 @@ export default function SettingsPage() {
         </TabsContent>
         <TabsContent value="library" className="mt-6">
           <LibrarySection />
+        </TabsContent>
+        <TabsContent value="agents" className="mt-6">
+          <AgentsSection />
         </TabsContent>
         <TabsContent value="about" className="mt-6">
           <AboutSection />
@@ -590,6 +601,191 @@ function AboutSection() {
           </div>
         )}
       </section>
+    </div>
+  );
+}
+
+// ---------- Agents ----------
+
+interface AgentEntry {
+  key: string;
+  label: string;
+  path: string;
+  iconType: string;
+  colorClass: string;
+}
+
+function AgentsSection() {
+  const [agents, setAgents] = useState<AgentEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [editing, setEditing] = useState<number | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState<AgentEntry>({ key: "", label: "", path: "", iconType: "default", colorClass: "" });
+
+  useEffect(() => {
+    GetAgentConfig()
+      .then((cfg) => {
+        if (cfg?.agents) {
+          setAgents(cfg.agents.map((a) => ({
+            key: a.key || "",
+            label: a.label || "",
+            path: a.path || "",
+            iconType: a.iconType || "default",
+            colorClass: a.colorClass || "",
+          })));
+        }
+      })
+      .finally(() => setLoading(false));
+  }, []);
+
+  const startAdd = () => {
+    setEditing(-1);
+    setForm({ key: "", label: "", path: "{home}/.new-agent/skills", iconType: "default", colorClass: "" });
+  };
+
+  const startEdit = (idx: number) => {
+    setEditing(idx);
+    setForm({ ...agents[idx] });
+  };
+
+  const removeAgent = (idx: number) => {
+    const updated = agents.filter((_, i) => i !== idx);
+    setAgents(updated);
+  };
+
+  const handleSave = async () => {
+    let updated: AgentEntry[];
+    if (editing === -1) {
+      updated = [...agents, form];
+    } else if (editing !== null) {
+      updated = agents.map((a, i) => (i === editing ? form : a));
+    } else {
+      updated = agents;
+    }
+    setSaving(true);
+    try {
+      await SaveAgentConfig({ agents: updated } as any);
+      setAgents(updated);
+      setEditing(null);
+      toast("Agents saved");
+    } catch (e) {
+      toast(`Save failed: ${e}`, true);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <Label>Agent 列表</Label>
+        <Button size="sm" variant="outline" onClick={startAdd}>
+          <Plus className="h-3.5 w-3.5 mr-1" />
+          Add
+        </Button>
+      </div>
+
+      {loading ? (
+        <div className="text-sm text-muted-foreground">Loading…</div>
+      ) : agents.length === 0 ? (
+        <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
+          No agents configured. Click "Add" to get started.
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {agents.map((a, i) => (
+            editing === i ? (
+              <div key={i} className="rounded-lg border border-primary/50 p-3 space-y-2">
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <Label className="text-xs">Key</Label>
+                    <Input value={form.key} onChange={(e) => setForm({ ...form, key: e.target.value })} className="text-xs" />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Label</Label>
+                    <Input value={form.label} onChange={(e) => setForm({ ...form, label: e.target.value })} className="text-xs" />
+                  </div>
+                </div>
+                <div>
+                  <Label className="text-xs">Path</Label>
+                  <Input value={form.path} onChange={(e) => setForm({ ...form, path: e.target.value })} className="text-xs font-mono" placeholder="{home}/.agent/skills" />
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <Label className="text-xs">Icon Type</Label>
+                    <Input value={form.iconType} onChange={(e) => setForm({ ...form, iconType: e.target.value })} className="text-xs" />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Color Class</Label>
+                    <Input value={form.colorClass} onChange={(e) => setForm({ ...form, colorClass: e.target.value })} className="text-xs font-mono" />
+                  </div>
+                </div>
+                <div className="flex gap-2 pt-1">
+                  <Button size="sm" onClick={handleSave} disabled={saving}>
+                    <Save className="h-3.5 w-3.5 mr-1" />
+                    {saving ? "Saving…" : "Save"}
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => setEditing(null)}>
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            ) : editing === -1 ? (
+              <div key={i} className="rounded-lg border border-primary/50 p-3 space-y-2">
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <Label className="text-xs">Key</Label>
+                    <Input value={form.key} onChange={(e) => setForm({ ...form, key: e.target.value })} className="text-xs" />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Label</Label>
+                    <Input value={form.label} onChange={(e) => setForm({ ...form, label: e.target.value })} className="text-xs" />
+                  </div>
+                </div>
+                <div>
+                  <Label className="text-xs">Path</Label>
+                  <Input value={form.path} onChange={(e) => setForm({ ...form, path: e.target.value })} className="text-xs font-mono" placeholder="{home}/.agent/skills" />
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <Label className="text-xs">Icon Type</Label>
+                    <Input value={form.iconType} onChange={(e) => setForm({ ...form, iconType: e.target.value })} className="text-xs" />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Color Class</Label>
+                    <Input value={form.colorClass} onChange={(e) => setForm({ ...form, colorClass: e.target.value })} className="text-xs font-mono" />
+                  </div>
+                </div>
+                <div className="flex gap-2 pt-1">
+                  <Button size="sm" onClick={handleSave} disabled={saving}>
+                    <Save className="h-3.5 w-3.5 mr-1" />
+                    {saving ? "Saving…" : "Add"}
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => setEditing(null)}>
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div key={i} className="flex items-center gap-3 rounded-lg bg-card px-3 py-2">
+                <span className="flex-1 text-sm font-medium">{a.label || a.key}</span>
+                <span className="text-xs text-muted-foreground font-mono truncate max-w-[200px]">{a.path}</span>
+                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => startEdit(i)}>
+                  <Pencil className="h-3 w-3" />
+                </Button>
+                <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => removeAgent(i)}>
+                  <Trash2 className="h-3 w-3" />
+                </Button>
+              </div>
+            )
+          ))}
+        </div>
+      )}
+
+      <Separator />
+      <p className="text-xs text-muted-foreground">
+        路径支持 {"{home}"} 占位符，会自动替换为用户 home 目录。
+      </p>
     </div>
   );
 }

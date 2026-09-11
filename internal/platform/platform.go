@@ -76,14 +76,12 @@ func baseDir() (string, error) {
 }
 
 // SkillLibraryDir returns the directory where the skill library is stored.
+// Uses ~/.aimanager/skills/ for a simple, predictable path.
+// Does NOT create the directory — callers must ensure it exists.
 func SkillLibraryDir() (string, error) {
-	dir, err := DataDir()
+	home, err := os.UserHomeDir()
 	if err != nil {
 		return "", err
 	}
-	skillDir := filepath.Join(dir, "library", "skills")
-	if err := os.MkdirAll(skillDir, 0o755); err != nil {
-		return "", err
-	}
-	return skillDir, nil
+	return filepath.Join(home, ".aimanager", "skills"), nil
 }

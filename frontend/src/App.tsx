@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Layers, Settings, FolderTree, PanelLeftClose, PanelLeftOpen, Sparkles } from "lucide-react";
+import { Layers, Settings, FolderTree, PanelLeftClose, PanelLeftOpen, Sparkles, Bot } from "lucide-react";
 import type { Layout, LayoutChangedMeta } from "react-resizable-panels";
 import { cn } from "@/lib/utils";
 import { useToasts } from "@/lib/toast";
@@ -20,10 +20,12 @@ import { usePreferencesStore } from "@/modules/settings/store";
 import SkillsPage from "@/pages/SkillsPage";
 import SettingsPage from "@/pages/SettingsPage";
 import ProjectsPage from "@/pages/ProjectsPage";
+import AgentsPage from "@/pages/AgentsPage";
 
 const NAV = [
   { key: "skills", label: "技能", icon: Layers },
   { key: "projects", label: "项目", icon: FolderTree },
+  { key: "agents", label: "Agents", icon: Bot },
 ] as const;
 
 type TabKey = (typeof NAV)[number]["key"] | "settings";
@@ -58,7 +60,8 @@ export default function App() {
       const mod = e.metaKey || e.ctrlKey;
       if (mod && e.key === "1") { e.preventDefault(); select("skills"); }
       else if (mod && e.key === "2") { e.preventDefault(); select("projects"); }
-      else if (mod && e.key === "3") { e.preventDefault(); select("settings"); }
+      else if (mod && e.key === "3") { e.preventDefault(); select("agents"); }
+      else if (mod && e.key === "4") { e.preventDefault(); select("settings"); }
       else if (mod && e.key === "k") {
         e.preventDefault();
         const input = document.querySelector<HTMLInputElement>('input[type="search"], input[placeholder*="搜索"], input[placeholder*="Search"]');
@@ -150,7 +153,7 @@ export default function App() {
               <>
                 {/* Brand row — stretches to the window top. On macOS the
                     traffic-light spacer reserves room for the native controls. */}
-                <div className="app-drag flex h-14 shrink-0 items-center justify-between px-3">
+                <div className="app-drag flex h-14 shrink-0 items-center gap-2 px-3">
                   <div className="app-no-drag flex min-w-0 items-center gap-2">
                     <TrafficLightSpacer />
                     <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-accent text-primary-foreground">
@@ -228,7 +231,7 @@ export default function App() {
                     : "100%",
               }}
             >
-              {tab === "skills" ? <SkillsPage /> : tab === "projects" ? <ProjectsPage /> : <SettingsPage />}
+              {tab === "skills" ? <SkillsPage /> : tab === "projects" ? <ProjectsPage /> : tab === "agents" ? <AgentsPage /> : <SettingsPage />}
             </main>
           </div>
         </ResizablePanel>

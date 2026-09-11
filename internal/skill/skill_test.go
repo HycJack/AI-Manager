@@ -166,6 +166,77 @@ func TestLoadMetadata(t *testing.T) {
 	}
 }
 
+func TestParseSkillFrontmatterVersion(t *testing.T) {
+	tests := []struct {
+		name  string
+		content string
+		want  string
+	}{
+		{
+			name:  "version in frontmatter",
+			content: "---\nname: My Skill\nversion: 2.1.0\ndescription: A test skill\n---\n# My Skill\n",
+			want:  "2.1.0",
+		},
+		{
+			name:  "quoted version",
+			content: "---\nversion: \"3.0.0\"\nname: Quoted\n---\n# Quoted\n",
+			want:  "3.0.0",
+		},
+		{
+			name:  "no frontmatter",
+			content: "# My Skill\n\nNo frontmatter here.\n",
+			want:  "",
+		},
+		{
+			name:  "frontmatter without version",
+			content: "---\nname: No Version\ndescription: Just a name\n---\n# No Version\n",
+			want:  "",
+		},
+		{
+			name:  "empty frontmatter",
+			content: "---\n---\n# Empty\n",
+			want:  "",
+		},
+		{
+			name:  "comments ignored",
+			content: "---\n# this is a comment\nversion: 1.5.0\n# another comment\n---\n# Comments\n",
+			want:  "1.5.0",
+		},
+		{
+			name:  "extra fields ignored",
+			content: "---\nname: Extra\nauthor: Someone\nversion: 4.2.0\ntags: [a, b]\n---\n# Extra\n",
+			want:  "4.2.0",
+		},
+		{
+			name:  "no closing delimiter",
+			content: "---\nversion: 1.0.0\nname: Unclosed\n",
+			want:  "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tmp := t.TempDir()
+			if err := os.WriteFile(filepath.Join(tmp, "SKILL.md"), []byte(tt.content), 0o644); err != nil {
+				t.Fatalf("WriteFile() returned error: %v", err)
+			}
+			got := parseSkillFrontmatterVersion(tmp)
+			if got != tt.want {
+				t.Errorf("parseSkillFrontmatterVersion() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestParseSkillFrontmatterVersion_NoFile(t *testing.T) {
+	tmp := t.TempDir()
+	// No SKILL.md in the directory
+	got := parseSkillFrontmatterVersion(tmp)
+	if got != "" {
+		t.Errorf("parseSkillFrontmatterVersion() = %q, want empty string for missing SKILL.md", got)
+	}
+}
+
 func TestOriginType_Values(t *testing.T) {
 	types := []OriginType{
 		OriginLocal, OriginGitHub, OriginSkillsSh,

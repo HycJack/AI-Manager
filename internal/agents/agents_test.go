@@ -16,7 +16,7 @@ func TestTargetDir_Universal(t *testing.T) {
 
 func TestTargetDir_ClaudeCode(t *testing.T) {
 	got := TargetDir("/projects/myproj", TargetClaudeCode)
-	want := "/projects/myproj/.claude-code/skills"
+	want := "/projects/myproj/.claude/skills"
 	if got != want {
 		t.Errorf("TargetDir(claude-code) = %q, want %q", got, want)
 	}
@@ -27,7 +27,7 @@ func TestAgentDir(t *testing.T) {
 		agent AgentKind
 		want  string
 	}{
-		{AgentClaudeCode, ".claude-code"},
+		{AgentClaudeCode, ".claude"},
 		{AgentCodex, ".codex"},
 		{AgentCursor, ".cursor"},
 		{AgentOpenCode, ".opencode"},
@@ -74,7 +74,7 @@ func TestAgentDirs_Empty(t *testing.T) {
 func TestAgentDirs_WithDirs(t *testing.T) {
 	tmp := t.TempDir()
 
-	claudeDir := filepath.Join(tmp, ".claude-code", "skills")
+	claudeDir := filepath.Join(tmp, ".claude", "skills")
 	if err := os.MkdirAll(claudeDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -108,7 +108,7 @@ func TestDiscoverSkills_Empty(t *testing.T) {
 func TestDiscoverSkills_FindsSkill(t *testing.T) {
 	tmp := t.TempDir()
 
-	skillDir := filepath.Join(tmp, ".claude-code", "skills", "my-skill")
+	skillDir := filepath.Join(tmp, ".claude", "skills", "my-skill")
 	if err := os.MkdirAll(skillDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -134,7 +134,7 @@ func TestDiscoverSkills_FindsSkill(t *testing.T) {
 func TestDiscoverSkills_MultipleAgents(t *testing.T) {
 	tmp := t.TempDir()
 
-	_, _, err := createSkillDir(tmp, ".claude-code", "skills", "skill-a", "SKILL.md", "# Skill A")
+	_, _, err := createSkillDir(tmp, ".claude", "skills", "skill-a", "SKILL.md", "# Skill A")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -152,7 +152,7 @@ func TestDiscoverSkills_MultipleAgents(t *testing.T) {
 func TestDiscoverSkills_IgnoresNonSkillDirs(t *testing.T) {
 	tmp := t.TempDir()
 
-	dir := filepath.Join(tmp, ".claude-code", "skills", "not-a-skill")
+	dir := filepath.Join(tmp, ".claude", "skills", "not-a-skill")
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -166,7 +166,7 @@ func TestDiscoverSkills_IgnoresNonSkillDirs(t *testing.T) {
 func TestDiscoverSkills_WithVersion(t *testing.T) {
 	tmp := t.TempDir()
 
-	skillDir := filepath.Join(tmp, ".claude-code", "skills", "versioned")
+	skillDir := filepath.Join(tmp, ".claude", "skills", "versioned")
 	if err := os.MkdirAll(skillDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -189,15 +189,15 @@ func TestDiscoverSkills_WithVersion(t *testing.T) {
 
 func TestAllAgentKinds(t *testing.T) {
 	kinds := AllAgentKinds()
-	if len(kinds) != 10 {
-		t.Errorf("AllAgentKinds() len = %d, want 10", len(kinds))
+	if len(kinds) != 21 {
+		t.Errorf("AllAgentKinds() len = %d, want 21", len(kinds))
 	}
 }
 
 func TestAllTargets(t *testing.T) {
 	targets := AllTargets()
-	if len(targets) != 10 {
-		t.Errorf("AllTargets() len = %d, want 10", len(targets))
+	if len(targets) != 12 {
+		t.Errorf("AllTargets() len = %d, want 12", len(targets))
 	}
 }
 

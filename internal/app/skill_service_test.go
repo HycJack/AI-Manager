@@ -287,3 +287,108 @@ func TestSkillService_DuplicateAdd(t *testing.T) {
 		t.Error("duplicate AddSkill() expected error, got nil")
 	}
 }
+
+func TestSkillService_GetEffectiveSkills(t *testing.T) {
+	s := NewSkillService(newTestState(t))
+
+	skills, err := s.GetEffectiveSkills()
+	if err != nil {
+		t.Fatalf("GetEffectiveSkills() returned error: %v", err)
+	}
+	// Result can be empty (no agent directories exist) or non-empty
+	// (user has agent skills installed). Either way, no error.
+	for i, sk := range skills {
+		if sk.Name == "" {
+			t.Errorf("skill %d has empty name", i)
+		}
+		if sk.Agents == nil || len(sk.Agents) == 0 {
+			t.Errorf("skill %d (%s) has no agents", i, sk.Name)
+		}
+	}
+}
+
+func TestSkillService_UninstallEffectiveSkill_NotSymlink(t *testing.T) {
+	s := NewSkillService(newTestState(t))
+
+	// Create a real directory (not a symlink) in a temp location
+	tmpDir := t.TempDir()
+	skillDir := filepath.Join(tmpDir, "test-skill")
+	if err := os.MkdirAll(skillDir, 0755); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(skillDir, "SKILL.md"), []byte("# Test"), 0644); err != nil {
+		t.Fatalf("write: %v", err)
+	}
+
+	// Uninstall should fail because it's not a symlink
+	err := s.UninstallEffectiveSkill(tmpDir, "test-skill")
+	if err == nil {
+		t.Error("UninstallEffectiveSkill() on non-symlink expected error, got nil")
+	}
+}
+
+func TestSkillService_UninstallEffectiveSkill_Symlink(t *testing.T) {
+	s := NewSkillService(newTestState(t))
+
+	// Create a source directory
+	srcDir := t.TempDir()
+	if err := os.MkdirAll(srcDir, 0755); err != nil {
+		t.Fatalf("mkdir src: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(srcDir, "SKILL.md"), []byte("# Source"), 0644); err != nil {
+		t.Fatalf("write: %v", err)
+	}
+
+	// Create a symlink to it
+	linkDir := t.TempDir()
+	linkPath := filepath.Join(linkDir, "test-skill")
+	if err := os.Symlink(srcDir, linkPath); err != nil {
+		t.Fatalf("symlink: %v", err)
+	}
+
+	// Verify it exists
+	if _, err := os.Lstat(linkPath); err != nil {
+		t.Fatalf("symlink should exist: %v", err)
+	}
+
+	// Uninstall should remove the symlink
+	err := s.UninstallEffectiveSkill(linkDir, "test-skill")
+	if err != nil {
+		t.Fatalf("UninstallEffectiveSkill() returned error: %v", err)
+	}
+
+	// Verify it's gone
+	if _, err := os.Lstat(linkPath); !os.IsNotExist(err) {
+		t.Error("symlink should be removed after uninstall")
+	}
+}
+
+func TestSkillService_UninstallEffectiveSkill_AlreadyRemoved(t *testing.T) {
+	s := NewSkillService(newTestState(t))
+
+	tmpDir := t.TempDir()
+
+	// Uninstalling a non-existent skill should succeed (idempotent)
+	err := s.UninstallEffectiveSkill(tmpDir, "non-existent-skill")
+	if err != nil {
+		t.Errorf("UninstallEffectiveSkill() on missing skill should return nil, got: %v", err)
+	}
+}
+
+func TestSkillService_OpenSkillDirectory_NotFound(t *testing.T) {
+	s := NewSkillService(newTestState(t))
+
+	err := s.OpenSkillDirectory("non-existent-skill")
+	if err == nil {
+		t.Error("OpenSkillDirectory() on missing skill expected error, got nil")
+	}
+}
+
+func TestSkillService_OpenEffectiveSkillDirectory_NotExists(t *testing.T) {
+	s := NewSkillService(newTestState(t))
+
+	err := s.OpenEffectiveSkillDirectory("/non/existent/path")
+	if err == nil {
+		t.Error("OpenEffectiveSkillDirectory() on missing path expected error, got nil")
+	}
+}

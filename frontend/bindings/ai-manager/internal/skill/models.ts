@@ -57,6 +57,7 @@ export class Record {
     "name": string;
     "slug": string;
     "version": string;
+    "description"?: string;
     "authors"?: string[];
     "license"?: string;
     "keywords"?: string[];
@@ -98,30 +99,30 @@ export class Record {
      * Creates a new Record instance from a string or object.
      */
     static createFrom($$source: any = {}): Record {
-        const $$createField4_0 = $$createType0;
-        const $$createField6_0 = $$createType0;
+        const $$createField5_0 = $$createType0;
         const $$createField7_0 = $$createType0;
-        const $$createField9_0 = $$createType1;
-        const $$createField11_0 = $Create.DateFromTime;
+        const $$createField8_0 = $$createType0;
+        const $$createField10_0 = $$createType1;
         const $$createField12_0 = $Create.DateFromTime;
+        const $$createField13_0 = $Create.DateFromTime;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("authors" in $$parsedSource) {
-            $$parsedSource["authors"] = $$createField4_0($$parsedSource["authors"]);
+            $$parsedSource["authors"] = $$createField5_0($$parsedSource["authors"]);
         }
         if ("keywords" in $$parsedSource) {
-            $$parsedSource["keywords"] = $$createField6_0($$parsedSource["keywords"]);
+            $$parsedSource["keywords"] = $$createField7_0($$parsedSource["keywords"]);
         }
         if ("tags" in $$parsedSource) {
-            $$parsedSource["tags"] = $$createField7_0($$parsedSource["tags"]);
+            $$parsedSource["tags"] = $$createField8_0($$parsedSource["tags"]);
         }
         if ("origin" in $$parsedSource) {
-            $$parsedSource["origin"] = $$createField9_0($$parsedSource["origin"]);
+            $$parsedSource["origin"] = $$createField10_0($$parsedSource["origin"]);
         }
         if ("updatedAt" in $$parsedSource) {
-            $$parsedSource["updatedAt"] = $$createField11_0($$parsedSource["updatedAt"]);
+            $$parsedSource["updatedAt"] = $$createField12_0($$parsedSource["updatedAt"]);
         }
         if ("installedAt" in $$parsedSource) {
-            $$parsedSource["installedAt"] = $$createField12_0($$parsedSource["installedAt"]);
+            $$parsedSource["installedAt"] = $$createField13_0($$parsedSource["installedAt"]);
         }
         return new Record($$parsedSource as Partial<Record>);
     }
@@ -135,6 +136,7 @@ export class Summary {
     "name": string;
     "slug": string;
     "version": string;
+    "description"?: string;
     "installed": boolean;
     "updatedAt": Date;
 
@@ -166,10 +168,10 @@ export class Summary {
      * Creates a new Summary instance from a string or object.
      */
     static createFrom($$source: any = {}): Summary {
-        const $$createField5_0 = $Create.DateFromTime;
+        const $$createField6_0 = $Create.DateFromTime;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("updatedAt" in $$parsedSource) {
-            $$parsedSource["updatedAt"] = $$createField5_0($$parsedSource["updatedAt"]);
+            $$parsedSource["updatedAt"] = $$createField6_0($$parsedSource["updatedAt"]);
         }
         return new Summary($$parsedSource as Partial<Summary>);
     }

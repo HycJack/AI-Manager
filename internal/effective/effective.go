@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"ai-manager/internal/agents"
@@ -121,56 +122,53 @@ func GetEffectiveSkills(projectPath string) []EffectiveSkill {
 	}
 
 	// Also scan user-level directories
-	home, _ := os.UserHomeDir()
-	if home != "" {
-		for _, target := range targets {
-			userDir := agents.TargetDir(home, target)
-			if userDir == "" {
-				continue
-			}
-			agentName := string(agents.TargetAgent(target))
+	for _, target := range targets {
+		userDir := agents.UserTargetDir(target)
+		if userDir == "" {
+			continue
+		}
+		agentName := string(agents.TargetAgent(target))
 
-			entries, err := os.ReadDir(userDir)
+		entries, err := os.ReadDir(userDir)
+		if err != nil {
+			continue
+		}
+
+		for _, entry := range entries {
+			skillPath := filepath.Join(userDir, entry.Name())
+
+			info, err := os.Lstat(skillPath)
 			if err != nil {
 				continue
 			}
-
-			for _, entry := range entries {
-				skillPath := filepath.Join(userDir, entry.Name())
-
-				info, err := os.Lstat(skillPath)
-				if err != nil {
-					continue
-				}
-				isSymlink := info.Mode()&os.ModeSymlink != 0
-				if !info.IsDir() && !isSymlink {
-					continue
-				}
-
-				hasManifest := false
-				for _, name := range []string{"SKILL.md", "README.md"} {
-					if _, err := os.Stat(filepath.Join(skillPath, name)); err == nil {
-						hasManifest = true
-						break
-					}
-				}
-				if !hasManifest {
-					continue
-				}
-
-				canonical, err := filepath.EvalSymlinks(skillPath)
-				if err != nil {
-					canonical = skillPath
-				}
-
-				allDiscovered = append(allDiscovered, discoveredSkill{
-					name:      entry.Name(),
-					path:      skillPath,
-					canonical: canonical,
-					agent:     agentName,
-					location:  userDir,
-				})
+			isSymlink := info.Mode()&os.ModeSymlink != 0
+			if !info.IsDir() && !isSymlink {
+				continue
 			}
+
+			hasManifest := false
+			for _, name := range []string{"SKILL.md", "README.md"} {
+				if _, err := os.Stat(filepath.Join(skillPath, name)); err == nil {
+					hasManifest = true
+					break
+				}
+			}
+			if !hasManifest {
+				continue
+			}
+
+			canonical, err := filepath.EvalSymlinks(skillPath)
+			if err != nil {
+				canonical = skillPath
+			}
+
+			allDiscovered = append(allDiscovered, discoveredSkill{
+				name:      entry.Name(),
+				path:      skillPath,
+				canonical: canonical,
+				agent:     agentName,
+				location:  userDir,
+			})
 		}
 	}
 
@@ -243,6 +241,10 @@ func GetEffectiveSkills(projectPath string) []EffectiveSkill {
 			SkillCount:    skillCount,
 		})
 	}
+
+	sort.Slice(result, func(i, j int) bool {
+		return result[i].Name < result[j].Name
+	})
 
 	return result
 }

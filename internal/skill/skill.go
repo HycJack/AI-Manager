@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
@@ -49,6 +50,7 @@ type Record struct {
 	Name      string   `json:"name"`
 	Slug      string   `json:"slug"`
 	Version   string   `json:"version"`
+	Description string `json:"description,omitempty"`
 	Authors   []string `json:"authors,omitempty"`
 	License   string   `json:"license,omitempty"`
 	Keywords  []string `json:"keywords,omitempty"`
@@ -66,6 +68,7 @@ type Summary struct {
 	Name      string `json:"name"`
 	Slug      string `json:"slug"`
 	Version   string `json:"version"`
+	Description string `json:"description,omitempty"`
 	Installed bool   `json:"installed"`
 	UpdatedAt time.Time `json:"updatedAt"`
 }
@@ -77,6 +80,7 @@ func (r *Record) NewSummary() Summary {
 		Name:      r.Name,
 		Slug:      r.Slug,
 		Version:   r.Version,
+		Description: r.Description,
 		Installed: r.Installed,
 		UpdatedAt: r.UpdatedAt,
 	}
@@ -106,4 +110,104 @@ func LoadMetadata(skillDir string) (*Record, error) {
 		return nil, err
 	}
 	return &rec, nil
+}
+
+// parseSkillFrontmatterVersion reads SKILL.md from the given directory and
+// returns the version declared in its YAML frontmatter (the block between
+// the first two --- lines). Returns an empty string if no frontmatter or no
+// version field is found.
+func parseSkillFrontmatterVersion(skillDir string) string {
+	skillPath := filepath.Join(skillDir, "SKILL.md")
+	data, err := os.ReadFile(skillPath)
+	if err != nil {
+		return ""
+	}
+
+	lines := strings.Split(string(data), "\n")
+
+	// Frontmatter must start on the first line.
+	if len(lines) == 0 || strings.TrimSpace(lines[0]) != "---" {
+		return ""
+	}
+
+	// Find the closing ---.
+	endIdx := -1
+	for i := 1; i < len(lines); i++ {
+		if strings.TrimSpace(lines[i]) == "---" {
+			endIdx = i
+			break
+		}
+	}
+	if endIdx == -1 {
+		return ""
+	}
+
+	// Parse key: value pairs between the markers.
+	for i := 1; i < endIdx; i++ {
+		line := strings.TrimSpace(lines[i])
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		parts := strings.SplitN(line, ":", 2)
+		if len(parts) != 2 {
+			continue
+		}
+		key := strings.TrimSpace(parts[0])
+		value := strings.TrimSpace(parts[1])
+		value = strings.Trim(value, `"'`)
+		if key == "version" && value != "" {
+			return value
+		}
+	}
+
+	return ""
+}
+
+// ParseSkillFrontmatterDescription reads SKILL.md and returns the description
+// from its YAML frontmatter. Returns empty string if no frontmatter or no description.
+func ParseSkillFrontmatterDescription(skillDir string) string {
+	skillPath := filepath.Join(skillDir, "SKILL.md")
+	data, err := os.ReadFile(skillPath)
+	if err != nil {
+		return ""
+	}
+
+	lines := strings.Split(string(data), "\n")
+
+	// Frontmatter must start on the first line.
+	if len(lines) == 0 || strings.TrimSpace(lines[0]) != "---" {
+		return ""
+	}
+
+	// Find the closing ---.
+	endIdx := -1
+	for i := 1; i < len(lines); i++ {
+		if strings.TrimSpace(lines[i]) == "---" {
+			endIdx = i
+			break
+		}
+	}
+	if endIdx == -1 {
+		return ""
+	}
+
+	// Parse key: value pairs between the markers.
+	for i := 1; i < endIdx; i++ {
+		line := strings.TrimSpace(lines[i])
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		parts := strings.SplitN(line, ":", 2)
+		if len(parts) != 2 {
+			continue
+		}
+		key := strings.TrimSpace(parts[0])
+		value := strings.TrimSpace(parts[1])
+		value = strings.Trim(value, `"'`)
+		if key == "description" && value != "" {
+			return value
+		}
+	}
+
+	return ""
 }

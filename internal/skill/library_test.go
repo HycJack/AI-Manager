@@ -70,7 +70,7 @@ func TestScanLocal(t *testing.T) {
 		{
 			name: "no skills",
 			files: map[string]string{},
-			wantCount: 0,
+			wantErr: true,
 		},
 		{
 			name: "one skill with SKILL.md",
@@ -80,11 +80,11 @@ func TestScanLocal(t *testing.T) {
 			wantCount: 1,
 		},
 		{
-			name: "one skill with README.md fallback",
+			name: "README.md-only is not a skill",
 			files: map[string]string{
 				"my-skill/README.md": "# My Skill\n\nREADME content.",
 			},
-			wantCount: 1,
+			wantErr: true,
 		},
 		{
 			name: "SKILL.md takes precedence",
@@ -103,19 +103,34 @@ func TestScanLocal(t *testing.T) {
 			wantCount: 1,
 		},
 		{
-			name: "multiple skills",
+			name: "multiple skills (README.md-only ignored)",
 			files: map[string]string{
 				"skill-a/SKILL.md": "# A",
 				"skill-b/SKILL.md": "# B",
 				"skill-c/README.md": "# C",
 			},
-			wantCount: 3,
+			wantCount: 2,
 		},
 		{
 			name: "metadata.json is loaded",
 			files: map[string]string{
 				"my-skill/SKILL.md": "# My Skill",
 				"my-skill/metadata.json": `{"name":"My Skill","version":"2.0.0","license":"MIT"}`,
+			},
+			wantCount: 1,
+		},
+		{
+			name: "root is a skill directory",
+			files: map[string]string{
+				"SKILL.md": "# Root Skill\n\nContent.",
+			},
+			wantCount: 1,
+		},
+		{
+			name: "root skill takes precedence over subdirs",
+			files: map[string]string{
+				"SKILL.md": "# Root Skill",
+				"sub/SKILL.md": "# Sub Skill",
 			},
 			wantCount: 1,
 		},
@@ -170,6 +185,77 @@ func TestScanLocal_NonExistentDir(t *testing.T) {
 	_, err := lib.ScanLocal(filepath.Join(tmp, "nonexistent"))
 	if err == nil {
 		t.Error("ScanLocal() expected error for non-existent dir, got nil")
+	}
+}
+
+func TestScanLocal_FrontmatterVersion(t *testing.T) {
+	tmp := t.TempDir()
+	lib, _ := NewLibrary(tmp)
+
+	// Create a skill with version in SKILL.md frontmatter
+	scanRoot := filepath.Join(tmp, "scan-root")
+	skillDir := filepath.Join(scanRoot, "versioned-skill")
+	os.MkdirAll(skillDir, 0o755)
+	os.WriteFile(filepath.Join(skillDir, "SKILL.md"),
+		[]byte("---\nname: Versioned Skill\nversion: 2.5.0\ndescription: Has a version\n---\n# Versioned Skill\n"), 0o644)
+
+	records, err := lib.ScanLocal(scanRoot)
+	if err != nil {
+		t.Fatalf("ScanLocal() returned error: %v", err)
+	}
+	if len(records) != 1 {
+		t.Fatalf("ScanLocal() returned %d records, want 1", len(records))
+	}
+	if records[0].Version != "2.5.0" {
+		t.Errorf("Version = %q, want %q (from frontmatter)", records[0].Version, "2.5.0")
+	}
+}
+
+func TestScanLocal_FrontmatterVersion_PrefersMetadataJSON(t *testing.T) {
+	tmp := t.TempDir()
+	lib, _ := NewLibrary(tmp)
+
+	// metadata.json version should take precedence over frontmatter
+	scanRoot := filepath.Join(tmp, "scan-root")
+	skillDir := filepath.Join(scanRoot, "prefer-metadata")
+	os.MkdirAll(skillDir, 0o755)
+	os.WriteFile(filepath.Join(skillDir, "SKILL.md"),
+		[]byte("---\nversion: 3.0.0\n---\n# Skill\n"), 0o644)
+	os.WriteFile(filepath.Join(skillDir, "metadata.json"),
+		[]byte(`{"version":"4.0.0"}`), 0o644)
+
+	records, err := lib.ScanLocal(scanRoot)
+	if err != nil {
+		t.Fatalf("ScanLocal() returned error: %v", err)
+	}
+	if len(records) != 1 {
+		t.Fatalf("ScanLocal() returned %d records, want 1", len(records))
+	}
+	if records[0].Version != "4.0.0" {
+		t.Errorf("Version = %q, want %q (metadata.json takes precedence)", records[0].Version, "4.0.0")
+	}
+}
+
+func TestScanLocal_DefaultVersion(t *testing.T) {
+	tmp := t.TempDir()
+	lib, _ := NewLibrary(tmp)
+
+	// No metadata.json, no frontmatter → default "1.0.0"
+	scanRoot := filepath.Join(tmp, "scan-root")
+	skillDir := filepath.Join(scanRoot, "no-version")
+	os.MkdirAll(skillDir, 0o755)
+	os.WriteFile(filepath.Join(skillDir, "SKILL.md"),
+		[]byte("# No Version Skill\n"), 0o644)
+
+	records, err := lib.ScanLocal(scanRoot)
+	if err != nil {
+		t.Fatalf("ScanLocal() returned error: %v", err)
+	}
+	if len(records) != 1 {
+		t.Fatalf("ScanLocal() returned %d records, want 1", len(records))
+	}
+	if records[0].Version != "1.0.0" {
+		t.Errorf("Version = %q, want %q (default)", records[0].Version, "1.0.0")
 	}
 }
 
@@ -370,6 +456,67 @@ func TestAddRecord_Duplicate(t *testing.T) {
 	err := lib.AddRecord(rec)
 	if err == nil {
 		t.Error("duplicate AddRecord() expected error, got nil")
+	}
+}
+
+func TestAddRecord_CopiesSkillFiles(t *testing.T) {
+	tmp := t.TempDir()
+
+	// Create a source skill directory with files
+	srcDir := filepath.Join(tmp, "my-skill")
+	os.MkdirAll(filepath.Join(srcDir, "references"), 0o755)
+	os.WriteFile(filepath.Join(srcDir, "SKILL.md"), []byte("# My Skill\n\nContent here."), 0o644)
+	os.WriteFile(filepath.Join(srcDir, "references", "guide.md"), []byte("# Guide\n\nReference content."), 0o644)
+	os.WriteFile(filepath.Join(srcDir, "metadata.json"), []byte(`{"version":"2.0.0"}`), 0o644)
+
+	lib, _ := NewLibrary(tmp)
+
+	rec := Record{
+		ID:        "test-id",
+		Name:      "My Skill",
+		Slug:      "my-skill",
+		Version:   "1.0.0",
+		Origin:    Origin{Type: OriginLocal, Path: srcDir},
+		Installed: true,
+	}
+	if err := lib.AddRecord(rec); err != nil {
+		t.Fatalf("AddRecord() returned error: %v", err)
+	}
+
+	// Verify files were copied to the library directory
+	skillPath := filepath.Join(lib.SkillDir(), "my-skill")
+
+	// SKILL.md should exist
+	if _, err := os.Stat(filepath.Join(skillPath, "SKILL.md")); err != nil {
+		t.Errorf("SKILL.md not copied to library: %v", err)
+	}
+
+	// Subdirectory files should exist
+	if _, err := os.Stat(filepath.Join(skillPath, "references", "guide.md")); err != nil {
+		t.Errorf("references/guide.md not copied to library: %v", err)
+	}
+
+	// metadata.json should exist (library writes its own)
+	if _, err := os.Stat(filepath.Join(skillPath, "metadata.json")); err != nil {
+		t.Errorf("metadata.json not found in library: %v", err)
+	}
+
+	// ListSkillFiles should return the copied files
+	files, err := lib.ListSkillFiles("my-skill")
+	if err != nil {
+		t.Fatalf("ListSkillFiles() returned error: %v", err)
+	}
+	if len(files) < 3 { // metadata.json + SKILL.md + references/guide.md
+		t.Errorf("ListSkillFiles() returned %d files, want >= 3: %v", len(files), files)
+	}
+
+	// LoadSkillReadme should return the SKILL.md content
+	readme, err := lib.LoadSkillReadme("my-skill")
+	if err != nil {
+		t.Fatalf("LoadSkillReadme() returned error: %v", err)
+	}
+	if readme != "# My Skill\n\nContent here." {
+		t.Errorf("LoadSkillReadme() = %q, want SKILL.md content", readme)
 	}
 }
 

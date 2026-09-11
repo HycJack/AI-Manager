@@ -30,7 +30,9 @@ export type AgentKey =
   | "grok"
   | "antigravity"
   | "droid"
-  | "copilot";
+  | "copilot"
+  | "hermes"
+  | "cc-switch";
 
 export interface AgentIconProps {
   size?: number;
@@ -57,6 +59,8 @@ export const AGENT_META: AgentMeta[] = [
   { key: "antigravity", label: "Antigravity", icon: ProviderAntigravityIcon },
   { key: "droid", label: "Droid", icon: ProviderDroidIcon },
   { key: "copilot", label: "GitHub Copilot", icon: ProviderCopilotIcon },
+  { key: "hermes", label: "Hermes", icon: Layers as unknown as AgentIconType },
+  { key: "cc-switch", label: "CC-Switch", icon: Layers as unknown as AgentIconType },
 ];
 
 const META_BY_KEY = new Map(AGENT_META.map((meta) => [meta.key, meta]));

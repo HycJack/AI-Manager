@@ -31,7 +31,7 @@ func TestInstallSkill_CreatesSymlink(t *testing.T) {
 	}
 
 	// Verify symlink exists
-	linkPath := filepath.Join(projDir, ".claude-code", "skills", "test-skill")
+	linkPath := filepath.Join(projDir, ".claude", "skills", "test-skill")
 	info, err := os.Lstat(linkPath)
 	if err != nil {
 		t.Fatalf("Lstat() returned error: %v", err)
@@ -108,7 +108,7 @@ func TestUninstallSkill_RemovesSymlink(t *testing.T) {
 	}
 
 	// Verify symlink removed
-	linkPath := filepath.Join(projDir, ".claude-code", "skills", "test-skill")
+	linkPath := filepath.Join(projDir, ".claude", "skills", "test-skill")
 	if _, err := os.Lstat(linkPath); !os.IsNotExist(err) {
 		t.Errorf("Symlink still exists after uninstall")
 	}
@@ -132,7 +132,7 @@ func TestUninstallSkill_RefusesRealDir(t *testing.T) {
 	tmp := t.TempDir()
 	projDir := filepath.Join(tmp, "proj")
 	// Create a real directory (not a symlink)
-	realDir := filepath.Join(projDir, ".claude-code", "skills", "real-dir")
+	realDir := filepath.Join(projDir, ".claude", "skills", "real-dir")
 	if err := os.MkdirAll(realDir, 0o755); err != nil {
 		t.Fatal(err)
 	}

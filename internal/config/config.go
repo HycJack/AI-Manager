@@ -12,8 +12,6 @@ import (
 	"os"
 	"path/filepath"
 	"time"
-
-	"ai-manager/internal/platform"
 )
 
 // Config holds all user-adjustable settings for the application.
@@ -35,14 +33,11 @@ type Config struct {
 	UpdateRepo string `json:"updateRepo"`
 }
 
-// Default returns the default configuration rooted in the user's home
-// directory, using the platform-appropriate data directory.
+// Default returns the default configuration. Data directory is always
+// ~/.aimanager/ for a simple, predictable path across all platforms.
 func Default() *Config {
-	dataDir, _ := platform.DataDir()
-	if dataDir == "" {
-		home, _ := os.UserHomeDir()
-		dataDir = filepath.Join(home, ".ai-manager")
-	}
+	home, _ := os.UserHomeDir()
+	dataDir := filepath.Join(home, ".aimanager")
 	return &Config{
 		AppName:  "AI-Manager",
 		DataDir:  dataDir,
@@ -127,11 +122,8 @@ func (c *Config) EnsureDirs() error {
 
 // DefaultPath returns the standard on-disk location of the config file.
 func DefaultPath() string {
-	dataDir, _ := platform.DataDir()
-	if dataDir == "" {
-		home, _ := os.UserHomeDir()
-		dataDir = filepath.Join(home, ".ai-manager")
-	}
+	home, _ := os.UserHomeDir()
+	dataDir := filepath.Join(home, ".aimanager")
 	return filepath.Join(dataDir, "config.json")
 }
 

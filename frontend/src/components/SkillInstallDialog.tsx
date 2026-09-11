@@ -41,6 +41,8 @@ const ALL_TARGETS: { value: string; label: string }[] = [
   { value: "antigravity", label: "Antigravity" },
   { value: "droid", label: "Droid" },
   { value: "copilot", label: "Copilot" },
+  { value: "hermes", label: "Hermes" },
+  { value: "cc-switch", label: "CC-Switch" },
 ];
 
 // ---------------------------------------------------------------------------

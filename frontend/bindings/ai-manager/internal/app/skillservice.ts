@@ -14,6 +14,12 @@ import { Call as $Call, CancellablePromise as $CancellablePromise, Create as $Cr
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
+import * as agents$0 from "../agents/models.js";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
+import * as effective$0 from "../effective/models.js";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
 import * as skill$0 from "../skill/models.js";
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
@@ -27,6 +33,14 @@ import * as $models from "./models.js";
  */
 export function AddSkill(kind: string, input: string, groupName: string, selectedSlugs: string[]): $CancellablePromise<void> {
     return $Call.ByID(2329671467, kind, input, groupName, selectedSlugs);
+}
+
+/**
+ * CheckSkillUpdates checks if any installed skills have newer versions available.
+ * Updates the HasUpdate field in the returned statuses.
+ */
+export function CheckSkillUpdates(): $CancellablePromise<void> {
+    return $Call.ByID(2504442512);
 }
 
 /**
@@ -44,12 +58,56 @@ export function CheckUpdates(): $CancellablePromise<$models.UpdateInfo[]> {
 }
 
 /**
+ * GetAgentConfig returns the dynamic agent configuration.
+ */
+export function GetAgentConfig(): $CancellablePromise<agents$0.AgentConfigFile | null> {
+    return $Call.ByID(3523483964).then(($result: any) => {
+        return $$createType3($result);
+    });
+}
+
+/**
+ * GetEffectiveSkills returns all effective skills visible to agents at the
+ * user level. It calls the effective package's GetEffectiveSkills with the
+ * user's home directory as the project path, scanning user-level agent
+ * directories (e.g. ~/.claude/skills, ~/.codex/skills, ~/.agents/skills).
+ * The result is deduplicated by canonical (resolved symlink) path.
+ */
+export function GetEffectiveSkills(): $CancellablePromise<effective$0.EffectiveSkill[]> {
+    return $Call.ByID(1731640340).then(($result: any) => {
+        return $$createType5($result);
+    });
+}
+
+/**
+ * GetExternalSkills scans all agent skill directories for skills that are
+ * not registered in the AI-Manager library. Returns them with their agent
+ * associations so the user can see and manage them.
+ */
+export function GetExternalSkills(): $CancellablePromise<$models.ExternalSkill[]> {
+    return $Call.ByID(2750492628).then(($result: any) => {
+        return $$createType7($result);
+    });
+}
+
+/**
  * GetSkill returns the full detail (record + files + readme) for a skill
  * identified by name or slug.
  */
 export function GetSkill(name: string): $CancellablePromise<$models.SkillDetail> {
     return $Call.ByID(2501105826, name).then(($result: any) => {
-        return $$createType2($result);
+        return $$createType8($result);
+    });
+}
+
+/**
+ * GetSkillAgentStatus returns all Library skills with per-agent installation
+ * status. For each skill, checks whether a symlink exists in each agent's
+ * user-level directory pointing to the skill's source in the Library.
+ */
+export function GetSkillAgentStatus(): $CancellablePromise<$models.SkillAgentStatus[]> {
+    return $Call.ByID(3570427489).then(($result: any) => {
+        return $$createType10($result);
     });
 }
 
@@ -58,8 +116,33 @@ export function GetSkill(name: string): $CancellablePromise<$models.SkillDetail>
  */
 export function ListSkills(): $CancellablePromise<skill$0.Summary[]> {
     return $Call.ByID(3187451021).then(($result: any) => {
-        return $$createType4($result);
+        return $$createType12($result);
     });
+}
+
+/**
+ * OpenEffectiveSkillDirectory opens the canonical source directory of an
+ * effective skill in the system file manager.
+ */
+export function OpenEffectiveSkillDirectory(canonicalPath: string): $CancellablePromise<void> {
+    return $Call.ByID(496506604, canonicalPath);
+}
+
+/**
+ * OpenSkillDirectory opens the source directory of a library skill in the
+ * system file manager (Finder on macOS, Explorer on Windows, etc.).
+ * The skill is identified by name or slug.
+ */
+export function OpenSkillDirectory(name: string): $CancellablePromise<void> {
+    return $Call.ByID(3546847379, name);
+}
+
+/**
+ * RegisterExternalSkill adds an external skill (found in an agent directory)
+ * to the AI-Manager library by copying it or creating a symlink.
+ */
+export function RegisterExternalSkill(canonicalPath: string): $CancellablePromise<void> {
+    return $Call.ByID(3425978210, canonicalPath);
 }
 
 /**
@@ -70,14 +153,66 @@ export function RemoveSkill(name: string): $CancellablePromise<void> {
 }
 
 /**
+ * SaveAgentConfig saves the agent configuration.
+ */
+export function SaveAgentConfig(cfg: agents$0.AgentConfigFile | null): $CancellablePromise<void> {
+    return $Call.ByID(3303384461, cfg);
+}
+
+/**
  * ScanSkill scans a source without adding anything. Returns the list of
  * discovered skills for preview. The frontend shows these in a result list
  * with multi-select, then calls AddSkill with the selected slugs.
  */
 export function ScanSkill(kind: string, input: string): $CancellablePromise<$models.SkillSummary[]> {
     return $Call.ByID(4292178559, kind, input).then(($result: any) => {
-        return $$createType6($result);
+        return $$createType14($result);
     });
+}
+
+/**
+ * SearchGitHubSkills searches GitHub for repositories containing skills.
+ */
+export function SearchGitHubSkills(query: string): $CancellablePromise<$models.GitHubSearchResult | null> {
+    return $Call.ByID(892326790, query).then(($result: any) => {
+        return $$createType16($result);
+    });
+}
+
+/**
+ * SearchSkillsSh searches the skills.sh registry for skills matching the query.
+ */
+export function SearchSkillsSh(query: string, limit: number, offset: number): $CancellablePromise<$models.SkillsShSearchResult | null> {
+    return $Call.ByID(1243972398, query, limit, offset).then(($result: any) => {
+        return $$createType18($result);
+    });
+}
+
+/**
+ * ToggleSkillAgent installs or uninstalls a skill for a specific agent.
+ * Returns the new installed state.
+ */
+export function ToggleSkillAgent(skillName: string, agentKey: string): $CancellablePromise<boolean> {
+    return $Call.ByID(3623948225, skillName, agentKey);
+}
+
+/**
+ * TriggerUpdateCheck runs the update check and returns the updated statuses.
+ */
+export function TriggerUpdateCheck(): $CancellablePromise<$models.SkillAgentStatus[]> {
+    return $Call.ByID(1414131480).then(($result: any) => {
+        return $$createType10($result);
+    });
+}
+
+/**
+ * UninstallEffectiveSkill removes a skill from a specific location.
+ * For managed skills (symlinks), it removes the symlink.
+ * For unmanaged skills (real directories), it refuses to delete.
+ * The location is the directory containing the skill (e.g. ~/.claude/skills).
+ */
+export function UninstallEffectiveSkill(location: string, name: string): $CancellablePromise<void> {
+    return $Call.ByID(1283523521, location, name);
 }
 
 /**
@@ -91,8 +226,20 @@ export function UpdateSkill(name: string): $CancellablePromise<void> {
 // Private type creation functions
 const $$createType0 = $models.UpdateInfo.createFrom;
 const $$createType1 = $Create.Array($$createType0);
-const $$createType2 = $models.SkillDetail.createFrom;
-const $$createType3 = skill$0.Summary.createFrom;
-const $$createType4 = $Create.Array($$createType3);
-const $$createType5 = $models.SkillSummary.createFrom;
-const $$createType6 = $Create.Array($$createType5);
+const $$createType2 = agents$0.AgentConfigFile.createFrom;
+const $$createType3 = $Create.Nullable($$createType2);
+const $$createType4 = effective$0.EffectiveSkill.createFrom;
+const $$createType5 = $Create.Array($$createType4);
+const $$createType6 = $models.ExternalSkill.createFrom;
+const $$createType7 = $Create.Array($$createType6);
+const $$createType8 = $models.SkillDetail.createFrom;
+const $$createType9 = $models.SkillAgentStatus.createFrom;
+const $$createType10 = $Create.Array($$createType9);
+const $$createType11 = skill$0.Summary.createFrom;
+const $$createType12 = $Create.Array($$createType11);
+const $$createType13 = $models.SkillSummary.createFrom;
+const $$createType14 = $Create.Array($$createType13);
+const $$createType15 = $models.GitHubSearchResult.createFrom;
+const $$createType16 = $Create.Nullable($$createType15);
+const $$createType17 = $models.SkillsShSearchResult.createFrom;
+const $$createType18 = $Create.Nullable($$createType17);

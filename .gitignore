@@ -41,3 +41,4 @@ frontend/dist/
 bin/
 .task/
 *.DS_Store
+.gopath/

@@ -82,7 +82,7 @@ func TestGetEffectiveSkills_Unmanaged(t *testing.T) {
 	t.Setenv("HOME", tmp)
 	projDir := filepath.Join(tmp, "proj")
 
-	skillDir := filepath.Join(projDir, ".claude-code", "skills", "my-skill")
+	skillDir := filepath.Join(projDir, ".claude", "skills", "my-skill")
 	if err := os.MkdirAll(skillDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -118,7 +118,7 @@ func TestGetEffectiveSkills_Managed(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	targetDir := filepath.Join(projDir, ".claude-code", "skills")
+	targetDir := filepath.Join(projDir, ".claude", "skills")
 	if err := os.MkdirAll(targetDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -155,8 +155,8 @@ func TestGetEffectiveSkills_SymlinkDeduplication(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Create symlinks in both .claude-code and .codex pointing to same source
-	for _, dir := range []string{".claude-code", ".codex"} {
+	// Create symlinks in both .claude and .codex pointing to same source
+	for _, dir := range []string{".claude", ".codex"} {
 		targetDir := filepath.Join(projDir, dir, "skills")
 		if err := os.MkdirAll(targetDir, 0o755); err != nil {
 			t.Fatal(err)
@@ -186,7 +186,7 @@ func TestGetEffectiveSkills_WarningThreshold(t *testing.T) {
 	t.Setenv("HOME", tmp)
 	projDir := filepath.Join(tmp, "proj")
 
-	skillDir := filepath.Join(projDir, ".claude-code", "skills", "big-skill")
+	skillDir := filepath.Join(projDir, ".claude", "skills", "big-skill")
 	if err := os.MkdirAll(skillDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -212,7 +212,7 @@ func TestGetEffectiveSkills_DangerThreshold(t *testing.T) {
 	t.Setenv("HOME", tmp)
 	projDir := filepath.Join(tmp, "proj")
 
-	skillDir := filepath.Join(projDir, ".claude-code", "skills", "huge-skill")
+	skillDir := filepath.Join(projDir, ".claude", "skills", "huge-skill")
 	if err := os.MkdirAll(skillDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -238,7 +238,7 @@ func TestGetEffectiveSkills_BothSharedAndAgent(t *testing.T) {
 	t.Setenv("HOME", tmp)
 	projDir := filepath.Join(tmp, "proj")
 
-	claudeDir := filepath.Join(projDir, ".claude-code", "skills", "agent-skill")
+	claudeDir := filepath.Join(projDir, ".claude", "skills", "agent-skill")
 	if err := os.MkdirAll(claudeDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
