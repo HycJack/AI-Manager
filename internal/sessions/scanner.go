@@ -124,7 +124,9 @@ func ForWithPaths(agent agents.AgentKind, p agents.AgentPaths) SessionScanner {
 		return newJSONLScanner(agent, p.SessionRootPath)
 	case agents.SessionFormatJSONFlat:
 		return newJSONScanner(agent, p.SessionRootPath)
-	case agents.SessionFormatSQLiteGlobal, agents.SessionFormatVSCodeStorage:
+	case agents.SessionFormatSQLiteGlobal:
+		return newSQLiteScanner(agent, p.SessionRootPath)
+	case agents.SessionFormatVSCodeStorage:
 		return newNoopScanner(agent, p.SessionFormat)
 	default:
 		return nil
