@@ -32,7 +32,7 @@ export class ProviderConfig {
     "exists": boolean;
 
     /**
-     * "openai", "anthropic", "deepseek", "custom", "unknown"
+     * active provider: "openai", "anthropic", "deepseek", "custom", "unknown"
      */
     "provider": string;
 
@@ -50,6 +50,11 @@ export class ProviderConfig {
      * masked: "****abcd" (only last 4 chars shown)
      */
     "api_key": string;
+
+    /**
+     * all providers found in config (multi-provider agents)
+     */
+    "providers"?: ProviderEntry[];
 
     /**
      * agent-specific fields
@@ -109,19 +114,84 @@ export class ProviderConfig {
      * Creates a new ProviderConfig instance from a string or object.
      */
     static createFrom($$source: any = {}): ProviderConfig {
-        const $$createField8_0 = $$createType0;
-        const $$createField9_0 = $$createType1;
+        const $$createField8_0 = $$createType1;
+        const $$createField9_0 = $$createType2;
+        const $$createField10_0 = $$createType3;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("providers" in $$parsedSource) {
+            $$parsedSource["providers"] = $$createField8_0($$parsedSource["providers"]);
+        }
         if ("extra" in $$parsedSource) {
-            $$parsedSource["extra"] = $$createField8_0($$parsedSource["extra"]);
+            $$parsedSource["extra"] = $$createField9_0($$parsedSource["extra"]);
         }
         if ("errors" in $$parsedSource) {
-            $$parsedSource["errors"] = $$createField9_0($$parsedSource["errors"]);
+            $$parsedSource["errors"] = $$createField10_0($$parsedSource["errors"]);
         }
         return new ProviderConfig($$parsedSource as Partial<ProviderConfig>);
     }
 }
 
+/**
+ * ProviderEntry describes one provider entry found in a multi-provider config.
+ */
+export class ProviderEntry {
+    /**
+     * provider key (e.g. "ollama", "deepseek")
+     */
+    "name": string;
+
+    /**
+     * default model for this provider
+     */
+    "model": string;
+
+    /**
+     * API base URL
+     */
+    "base_url": string;
+
+    /**
+     * masked API key
+     */
+    "api_key": string;
+
+    /**
+     * true if this is the currently active provider
+     */
+    "active": boolean;
+
+    /** Creates a new ProviderEntry instance. */
+    constructor($$source: Partial<ProviderEntry> = {}) {
+        if (!("name" in $$source)) {
+            this["name"] = "";
+        }
+        if (!("model" in $$source)) {
+            this["model"] = "";
+        }
+        if (!("base_url" in $$source)) {
+            this["base_url"] = "";
+        }
+        if (!("api_key" in $$source)) {
+            this["api_key"] = "";
+        }
+        if (!("active" in $$source)) {
+            this["active"] = false;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new ProviderEntry instance from a string or object.
+     */
+    static createFrom($$source: any = {}): ProviderEntry {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new ProviderEntry($$parsedSource as Partial<ProviderEntry>);
+    }
+}
+
 // Private type creation functions
-const $$createType0 = $Create.Map($Create.Any, $Create.Any);
-const $$createType1 = $Create.Array($Create.Any);
+const $$createType0 = ProviderEntry.createFrom;
+const $$createType1 = $Create.Array($$createType0);
+const $$createType2 = $Create.Map($Create.Any, $Create.Any);
+const $$createType3 = $Create.Array($Create.Any);

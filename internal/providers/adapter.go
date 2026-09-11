@@ -24,17 +24,27 @@ import (
 // ProviderConfig is the common view of an agent's provider configuration.
 // Agent-specific fields that don't fit the common schema go into Extra.
 type ProviderConfig struct {
-	Agent    agents.AgentKind `json:"agent"`
-	Path     string           `json:"path"`     // resolved config file path
-	Format   string           `json:"format"`   // "json", "toml", "yaml", "vscode-settings"
-	Exists   bool             `json:"exists"`   // true if the config file exists on disk
-	Provider string           `json:"provider"` // "openai", "anthropic", "deepseek", "custom", "unknown"
-	Model    string           `json:"model"`    // model identifier (e.g. "claude-3.5-sonnet")
-	BaseURL  string           `json:"base_url"` // API base URL (empty if using agent default)
-	APIKey   string           `json:"api_key"`  // masked: "****abcd" (only last 4 chars shown)
-	Extra    map[string]any   `json:"extra"`    // agent-specific fields
-	Errors   []string         `json:"errors"`   // field-level read errors
-	Raw      string           `json:"raw"`      // raw file content (for non-JSON formats)
+	Agent     agents.AgentKind `json:"agent"`
+	Path      string           `json:"path"`     // resolved config file path
+	Format    string           `json:"format"`   // "json", "toml", "yaml", "vscode-settings"
+	Exists    bool             `json:"exists"`   // true if the config file exists on disk
+	Provider  string           `json:"provider"` // active provider: "openai", "anthropic", "deepseek", "custom", "unknown"
+	Model     string           `json:"model"`    // model identifier (e.g. "claude-3.5-sonnet")
+	BaseURL   string           `json:"base_url"` // API base URL (empty if using agent default)
+	APIKey    string           `json:"api_key"`  // masked: "****abcd" (only last 4 chars shown)
+	Providers []ProviderEntry  `json:"providers,omitempty"` // all providers found in config (multi-provider agents)
+	Extra     map[string]any   `json:"extra"`    // agent-specific fields
+	Errors    []string         `json:"errors"`   // field-level read errors
+	Raw       string           `json:"raw"`      // raw file content (for non-JSON formats)
+}
+
+// ProviderEntry describes one provider entry found in a multi-provider config.
+type ProviderEntry struct {
+	Name    string `json:"name"`     // provider key (e.g. "ollama", "deepseek")
+	Model   string `json:"model"`    // default model for this provider
+	BaseURL string `json:"base_url"` // API base URL
+	APIKey  string `json:"api_key"`  // masked API key
+	Active  bool   `json:"active"`   // true if this is the currently active provider
 }
 
 // ProviderAdapter reads and writes a single agent's provider configuration.

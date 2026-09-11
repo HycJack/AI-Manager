@@ -41,7 +41,7 @@ import {
   SaveAgentPaths,
 } from "@bindings/ai-manager/internal/app/agentservice";
 import type { AgentInfo } from "@bindings/ai-manager/internal/app/models";
-import type { ProviderConfig } from "@bindings/ai-manager/internal/providers/models";
+import type { ProviderConfig, ProviderEntry } from "@bindings/ai-manager/internal/providers/models";
 import type { Session } from "@bindings/ai-manager/internal/sessions/models";
 import type { MemoryEntry } from "@bindings/ai-manager/internal/memory/models";
 import { Switch } from "@/components/ui/switch";
@@ -170,6 +170,7 @@ export default function AgentsPage() {
         model: editModel,
         base_url: editBaseUrl,
         api_key: editApiKey,
+        providers: providerConfig.providers,
         extra: providerConfig.extra,
         errors: providerConfig.errors,
         raw: providerConfig.raw,
@@ -344,8 +345,10 @@ export default function AgentsPage() {
                 {providerConfig ? (
                   <Card>
                     <CardHeader className="pb-2">
-                      <CardTitle className="text-sm">Provider Config</CardTitle>
-                      <p className="text-xs text-muted-foreground">{providerConfig.path} · {providerConfig.format}</p>
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-sm">Provider Config</CardTitle>
+                        <span className="text-xs text-muted-foreground">{providerConfig.path}</span>
+                      </div>
                     </CardHeader>
                     <CardContent className="space-y-3">
                       {providerConfig.errors?.length > 0 && (
@@ -354,9 +357,34 @@ export default function AgentsPage() {
                           <div>{providerConfig.errors.join("; ")}</div>
                         </div>
                       )}
+
+                      {/* Multi-provider table */}
+                      {providerConfig.providers && providerConfig.providers.length > 1 && (
+                        <div className="rounded-md border">
+                          <div className="bg-muted/50 px-3 py-1.5 text-xs font-medium border-b">
+                            Providers ({providerConfig.providers.length})
+                          </div>
+                          <div className="divide-y">
+                            {providerConfig.providers.map((p) => (
+                              <div key={p.name} className={cn(
+                                "flex items-center gap-2 px-3 py-2 text-xs",
+                                p.active && "bg-primary/5"
+                              )}>
+                                <span className={cn("h-2 w-2 rounded-full", p.active ? "bg-green-400" : "bg-muted-foreground/30")} />
+                                <span className="font-medium flex-1 truncate">{p.name}</span>
+                                <span className="text-muted-foreground truncate max-w-[120px]">{p.model || "-"}</span>
+                                <span className="text-muted-foreground truncate max-w-[140px]">{p.base_url || "-"}</span>
+                                <span className="font-mono text-muted-foreground">{p.api_key || "-"}</span>
+                                {p.active && <Badge variant="secondary" className="text-[10px] h-4 px-1">Active</Badge>}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
                       <div className="grid grid-cols-2 gap-3">
                         <div className="space-y-1">
-                          <label className="text-xs font-medium text-muted-foreground">Provider</label>
+                          <label className="text-xs font-medium text-muted-foreground">Active Provider</label>
                           <Input value={providerConfig.provider} disabled className="h-7 text-xs" />
                         </div>
                         <div className="space-y-1">
@@ -387,7 +415,10 @@ export default function AgentsPage() {
                     </CardContent>
                   </Card>
                 ) : (
-                  <p className="text-sm text-muted-foreground">该 Agent 无本地 Provider 配置</p>
+                  <div className="flex flex-col items-center justify-center py-8 text-center">
+                    <Settings2 className="h-8 w-8 text-muted-foreground/30 mb-2" />
+                    <p className="text-sm text-muted-foreground">该 Agent 无本地 Provider 配置</p>
+                  </div>
                 )}
               </TabsContent>
 
@@ -404,7 +435,10 @@ export default function AgentsPage() {
                 <div className="grid grid-cols-2 gap-2 h-[calc(100%-3rem)]">
                   <div className="space-y-1 overflow-y-auto min-h-0">
                     {filteredSessions.length === 0 ? (
-                      <p className="text-xs text-muted-foreground py-4 text-center">无会话</p>
+                      <div className="flex flex-col items-center justify-center py-8 text-center">
+                        <MessageSquare className="h-6 w-6 text-muted-foreground/30 mb-2" />
+                        <p className="text-xs text-muted-foreground">无会话</p>
+                      </div>
                     ) : (
                       filteredSessions.map((session) => (
                         <button
@@ -417,9 +451,9 @@ export default function AgentsPage() {
                           )}
                         >
                           <div className="flex items-center gap-1.5">
-                            <ChevronRight className="h-3 w-3 shrink-0" />
+                            <ChevronRight className="h-3 w-3 shrink-0 text-muted-foreground" />
                             <span className="flex-1 truncate font-medium">{session.id}</span>
-                            <Badge variant="outline" className="text-[10px]">{session.message_count} msg</Badge>
+                            <Badge variant="outline" className="text-[10px] h-4 px-1">{session.message_count} msg</Badge>
                           </div>
                           {session.project && <div className="truncate text-[10px] text-muted-foreground pl-4">{session.project}</div>}
                           <div className="text-[10px] text-muted-foreground pl-4">{new Date(session.started_at).toLocaleString()}</div>
@@ -445,7 +479,10 @@ export default function AgentsPage() {
                         )}
                       </>
                     ) : (
-                      <p className="text-xs text-muted-foreground py-8 text-center">选择一个会话查看内容</p>
+                      <div className="flex flex-col items-center justify-center py-8 text-center">
+                        <FileText className="h-6 w-6 text-muted-foreground/30 mb-2" />
+                        <p className="text-xs text-muted-foreground">选择一个会话查看内容</p>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -456,7 +493,10 @@ export default function AgentsPage() {
                 <div className="grid grid-cols-2 gap-2 h-[calc(100%-1rem)]">
                   <div className="space-y-1 overflow-y-auto min-h-0">
                     {memoryEntries.length === 0 ? (
-                      <p className="text-xs text-muted-foreground py-4 text-center">无 Memory 条目</p>
+                      <div className="flex flex-col items-center justify-center py-8 text-center">
+                        <Brain className="h-6 w-6 text-muted-foreground/30 mb-2" />
+                        <p className="text-xs text-muted-foreground">无 Memory 条目</p>
+                      </div>
                     ) : (
                       memoryEntries.map((entry) => (
                         <button
@@ -469,9 +509,9 @@ export default function AgentsPage() {
                           )}
                         >
                           <div className="flex items-center gap-1.5">
-                            <ChevronRight className="h-3 w-3 shrink-0" />
+                            <ChevronRight className="h-3 w-3 shrink-0 text-muted-foreground" />
                             <span className="flex-1 truncate font-medium">{entry.title}</span>
-                            <Badge variant="outline" className="text-[10px]">{entry.kind}</Badge>
+                            <Badge variant="outline" className="text-[10px] h-4 px-1">{entry.kind}</Badge>
                           </div>
                           <div className="truncate text-[10px] text-muted-foreground pl-4">{entry.size_bytes} bytes</div>
                         </button>
@@ -496,7 +536,10 @@ export default function AgentsPage() {
                         )}
                       </>
                     ) : (
-                      <p className="text-xs text-muted-foreground py-8 text-center">选择一个条目查看内容</p>
+                      <div className="flex flex-col items-center justify-center py-8 text-center">
+                        <FileText className="h-6 w-6 text-muted-foreground/30 mb-2" />
+                        <p className="text-xs text-muted-foreground">选择一个条目查看内容</p>
+                      </div>
                     )}
                   </div>
                 </div>

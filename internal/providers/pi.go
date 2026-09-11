@@ -49,14 +49,16 @@ func (a *piAdapter) Read() (*ProviderConfig, error) {
 	}
 
 	// Extract default provider/model from settings.json
+	defaultProvider := ""
 	if dm, ok := data["defaultModel"].(string); ok {
 		cfg.Model = dm
 	}
 	if dp, ok := data["defaultProvider"].(string); ok {
+		defaultProvider = dp
 		cfg.Provider = dp
 	}
 
-	// Try to read models.json for API key and base URL
+	// Try to read models.json for API key and base URL of all providers
 	modelsPath := filepath.Join(filepath.Dir(configPath), "models.json")
 	modelsData, merr := os.ReadFile(modelsPath)
 	if merr == nil {
@@ -64,12 +66,33 @@ func (a *piAdapter) Read() (*ProviderConfig, error) {
 			Providers map[string]struct {
 				APIKey  string `json:"apiKey"`
 				BaseURL string `json:"baseUrl"`
+				Models  []struct {
+					ID string `json:"id"`
+				} `json:"models"`
 			} `json:"providers"`
 		}
 		if err := json.Unmarshal(modelsData, &models); err == nil {
-			if p, ok := models.Providers[cfg.Provider]; ok {
+			// Populate all providers
+			for name, p := range models.Providers {
+				model := ""
+				if len(p.Models) > 0 {
+					model = p.Models[0].ID
+				}
+				cfg.Providers = append(cfg.Providers, ProviderEntry{
+					Name:   name,
+					Model:  model,
+					BaseURL: p.BaseURL,
+					APIKey: MaskAPIKey(p.APIKey),
+					Active: name == defaultProvider,
+				})
+			}
+			// Set active provider details
+			if p, ok := models.Providers[defaultProvider]; ok {
 				cfg.APIKey = MaskAPIKey(p.APIKey)
 				cfg.BaseURL = p.BaseURL
+				if len(p.Models) > 0 {
+					cfg.Model = p.Models[0].ID
+				}
 			}
 		}
 	}
