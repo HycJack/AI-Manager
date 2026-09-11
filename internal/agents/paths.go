@@ -249,7 +249,14 @@ func DefaultAgentPaths() map[AgentKind]AgentPaths {
 
 		// --- Agents not in memory-session-paths.md docs ---
 		AgentUniversal: {Status: PathStatusNotSupported},
-		AgentPi:        {Status: PathStatusNotSupported},
+		AgentPi: {
+			ProviderConfigPath: "{home}/.pi/agent/settings.json",
+			SessionRootPath:    "{home}/.pi/agent/sessions",
+			SessionFormat:      SessionFormatJSONLPerProject,
+			MemoryRootPath:     "{home}/.pi/agent/skills",
+			MemoryFormat:       MemoryFormatNone,
+			Status:             PathStatusVerified,
+		},
 		AgentGrok:      {Status: PathStatusNotSupported},
 		AgentDroid:     {Status: PathStatusNotSupported},
 		AgentHermes:    {Status: PathStatusNotSupported},

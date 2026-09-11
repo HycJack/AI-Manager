@@ -24,19 +24,21 @@ export interface ChatMessage {
 
 /**
  * 自动检测格式并解析 JSONL 文本为聊天消息列表。
- * 支持 Claude Code JSONL 和 Codex JSONL 两种格式。
+ * 支持 Claude Code / Pi JSONL 和 Codex JSONL 两种格式。
  */
 export function parseSessionMessages(raw: string): ChatMessage[] {
   const lines = raw.split("\n").filter((l) => l.trim());
   if (lines.length === 0) return [];
 
-  // 检测格式：第一行是否包含 "session_meta"（Codex）或 "queue-operation"（Claude Code）
+  // 检测格式：第一行是否包含 "session_meta"（Codex）或 "response_item"（Codex）
+  // 或 "session"（Pi）
   const firstLine = lines[0];
   const isCodex = firstLine.includes('"session_meta"') || firstLine.includes('"response_item"');
 
   if (isCodex) {
     return parseCodexFormat(lines);
   }
+  // Pi 和 Claude Code 使用类似的格式（message type + message.role）
   return parseClaudeFormat(lines);
 }
 
@@ -53,14 +55,15 @@ function parseClaudeFormat(lines: string[]): ChatMessage[] {
       const obj = JSON.parse(line);
       const type = obj.type;
 
-      // 跳过非消息类型
-      if (type === "queue-operation" || type === "attachment" || type === "skill_listing" ||
-        type === "agent_listing_delta" || type === "last-prompt") continue;
+      // 跳过非消息类型（Claude Code + Pi）
+      if (["queue-operation", "attachment", "skill_listing", "agent_listing_delta",
+        "last-prompt", "session", "model_change", "thinking_level_change",
+        "system", "error"].includes(type)) continue;
 
       const ts = obj.timestamp;
 
-      // user / assistant 消息
-      if (type === "user" || type === "assistant") {
+      // user / assistant / message 消息（Claude Code + Pi）
+      if (type === "user" || type === "assistant" || type === "message") {
         const msg = obj.message;
         if (!msg) continue;
 
