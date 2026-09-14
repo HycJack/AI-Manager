@@ -71,6 +71,22 @@ func (l *Library) SkillDir() string {
 	return l.skillsDir
 }
 
+// SkillSourceDir resolves the on-disk directory for a registered skill.
+//
+// Registry entries record an absolute path, which goes stale whenever the
+// library root moves (for example from ~/Library/Application Support/AIManager
+// /library to ~/.aimanager). When the recorded path no longer exists, fall back
+// to this library's own skills directory so a moved library keeps working
+// instead of failing every toggle.
+func (l *Library) SkillSourceDir(entryPath, slug string) string {
+	if entryPath != "" {
+		if _, err := os.Stat(entryPath); err == nil {
+			return entryPath
+		}
+	}
+	return filepath.Join(l.skillsDir, slug)
+}
+
 // ScanLocal scans a local folder for skill directories. A skill directory is
 // any directory containing a SKILL.md file. The root itself may be a skill
 // directory; if so, it is returned as a single record. Otherwise, the root is
@@ -448,6 +464,7 @@ func (l *Library) RescanAndRegister() (int, error) {
 	}
 
 	added := 0
+	repaired := 0
 	for _, entry := range entries {
 		if !entry.IsDir() || entry.Name() == "." || entry.Name() == ".." {
 			continue
@@ -468,11 +485,23 @@ func (l *Library) RescanAndRegister() (int, error) {
 		// Check if already registered (by slug or name matching dir name)
 		dirName := entry.Name()
 		found := false
-		for _, reg := range l.registry.Skills {
-			if strings.EqualFold(reg.Slug, dirName) || strings.EqualFold(reg.Name, dirName) {
-				found = true
-				break
+		for i := range l.registry.Skills {
+			reg := &l.registry.Skills[i]
+			if !strings.EqualFold(reg.Slug, dirName) && !strings.EqualFold(reg.Name, dirName) {
+				continue
 			}
+			found = true
+			// Entries keep an absolute path, which goes stale when the library
+			// root moves. Repair any that no longer exist (an empty path
+			// counts too: os.Stat("") fails) so the stale data heals itself
+			// instead of accumulating.
+			if reg.Path != skillDir {
+				if _, err := os.Stat(reg.Path); err != nil {
+					reg.Path = skillDir
+					repaired++
+				}
+			}
+			break
 		}
 		if found {
 			continue
@@ -501,7 +530,7 @@ func (l *Library) RescanAndRegister() (int, error) {
 		added++
 	}
 
-	if added > 0 {
+	if added > 0 || repaired > 0 {
 		_ = l.Save()
 	}
 	return added, nil

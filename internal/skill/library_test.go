@@ -4,6 +4,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"ai-manager/internal/config"
 )
 
 func TestNewLibrary(t *testing.T) {
@@ -705,5 +707,114 @@ func TestHashString(t *testing.T) {
 	h3 := hashString("other")
 	if h == h3 {
 		t.Error("hashString() produced same hash for different inputs")
+	}
+}
+
+// TestSkillSourceDir covers the stale-registry case: an entry recorded before
+// the library root moved must still resolve to a directory that exists, while
+// a path that is still valid stays put.
+func TestSkillSourceDir(t *testing.T) {
+	lib, err := NewLibrary(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := filepath.Join(lib.SkillDir(), "demo-skill")
+	if err := os.MkdirAll(want, 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	for _, tc := range []struct {
+		name      string
+		entryPath string
+		want      string
+	}{
+		// A path left behind by a previous library root (e.g.
+		// ~/Library/Application Support/AIManager/library/skills).
+		{"stale path", filepath.Join(t.TempDir(), "old-root", "skills", "demo-skill"), want},
+		{"empty path", "", want},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := lib.SkillSourceDir(tc.entryPath, "demo-skill"); got != tc.want {
+				t.Errorf("SkillSourceDir(%q) = %q, want %q", tc.entryPath, got, tc.want)
+			}
+		})
+	}
+
+	live := filepath.Join(lib.SkillDir(), "elsewhere")
+	if err := os.MkdirAll(live, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if got := lib.SkillSourceDir(live, "demo-skill"); got != live {
+		t.Errorf("SkillSourceDir(live) = %q, want %q", got, live)
+	}
+}
+
+// TestRescanAndRegister_RepairsStalePaths verifies the registry heals itself:
+// entries pointing at directories that no longer exist are rewritten to the
+// library's own skills directory, entries whose path is still valid are left
+// alone, and the repair survives a reload.
+func TestRescanAndRegister_RepairsStalePaths(t *testing.T) {
+	lib, err := NewLibrary(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	staleRoot := filepath.Join(t.TempDir(), "old-root", "skills")
+
+	mkSkill := func(dirName string) string {
+		dir := filepath.Join(lib.SkillDir(), dirName)
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(dir, "SKILL.md"), []byte("# "+dirName+"\n"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		return dir
+	}
+
+	// Registered under the old root: must be repaired.
+	staleSkillDir := mkSkill("stale-skill")
+	lib.registry.Skills = append(lib.registry.Skills, config.SkillEntry{
+		ID: "stale", Name: "Stale Skill", Slug: "stale-skill", Version: "1.0.0",
+		Installed: true, Path: filepath.Join(staleRoot, "stale-skill"),
+	})
+
+	// Registered under an existing external dir: must be untouched.
+	external := t.TempDir()
+	if err := os.WriteFile(filepath.Join(external, "SKILL.md"), []byte("# external\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	mkSkill("external-skill")
+	lib.registry.Skills = append(lib.registry.Skills, config.SkillEntry{
+		ID: "external", Name: "External Skill", Slug: "external-skill", Version: "1.0.0",
+		Installed: true, Path: external,
+	})
+
+	if _, err := lib.RescanAndRegister(); err != nil {
+		t.Fatal(err)
+	}
+
+	entry, ok := lib.FindSkill("stale-skill")
+	if !ok {
+		t.Fatal("stale-skill not registered")
+	}
+	if entry.Path != staleSkillDir {
+		t.Errorf("stale entry.Path = %q, want %q", entry.Path, staleSkillDir)
+	}
+
+	if entry, _ := lib.FindSkill("external-skill"); entry.Path != external {
+		t.Errorf("live entry.Path = %q, want unchanged %q", entry.Path, external)
+	}
+
+	// The repair must persist across a reload.
+	reloaded, err := NewLibrary(lib.dataDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	entry, ok = reloaded.FindSkill("stale-skill")
+	if !ok {
+		t.Fatal("stale-skill missing after reload")
+	}
+	if entry.Path != staleSkillDir {
+		t.Errorf("after reload entry.Path = %q, want %q", entry.Path, staleSkillDir)
 	}
 }
