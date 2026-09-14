@@ -24,9 +24,20 @@ type AgentConfigFile struct {
 
 // DefaultAgentConfig returns the default agent configuration.
 // Order matters — it determines the display order in the UI.
+//
+// "universal" is listed first: it targets the shared .agents/skills
+// directory that many agents read directly, so a skill linked there is
+// available to all of them at once.
 func DefaultAgentConfig() *AgentConfigFile {
 	return &AgentConfigFile{
 		Agents: []AgentConfig{
+			{
+				Key:        "universal",
+				Label:      "Universal",
+				Path:       "{home}/.agents/skills",
+				IconType:   "universal",
+				ColorClass: "bg-sky-500/10 ring-sky-500/20 text-sky-600 dark:text-sky-400 hover:bg-sky-500/20",
+			},
 			{
 				Key:        "claude-code",
 				Label:      "Claude Code",
@@ -97,10 +108,14 @@ func indexOf(s, sub string) int {
 
 // LoadAgentConfig loads the agent config from ~/.aimanager/agents.json.
 // If the file doesn't exist, creates it with the default config.
+//
+// Always returns a config that contains every built-in agent: missing ones are
+// merged in on read (see mergeBuiltins), so adding a new default agent reaches
+// already-installed copies without a manual migration.
 func LoadAgentConfig() (*AgentConfigFile, error) {
 	home, err := os.UserHomeDir()
 	if err != nil {
-		return DefaultAgentConfig(), nil
+		return mergeBuiltins(DefaultAgentConfig()), nil
 	}
 	configPath := filepath.Join(home, ".aimanager", "agents.json")
 
@@ -109,19 +124,42 @@ func LoadAgentConfig() (*AgentConfigFile, error) {
 		if os.IsNotExist(err) {
 			cfg := DefaultAgentConfig()
 			_ = SaveAgentConfig(cfg) // best-effort; return defaults regardless
-			return cfg, nil
+			return mergeBuiltins(cfg), nil
 		}
-		return DefaultAgentConfig(), nil
+		return mergeBuiltins(DefaultAgentConfig()), nil
 	}
 
 	var cfg AgentConfigFile
 	if err := json.Unmarshal(data, &cfg); err != nil {
-		return DefaultAgentConfig(), nil
+		return mergeBuiltins(DefaultAgentConfig()), nil
 	}
 	if len(cfg.Agents) == 0 {
-		return DefaultAgentConfig(), nil
+		return mergeBuiltins(DefaultAgentConfig()), nil
 	}
-	return &cfg, nil
+	return mergeBuiltins(&cfg), nil
+}
+
+// mergeBuiltins appends every DefaultAgentConfig() entry that is absent from
+// cfg, preserving the user's own order and any agents they added. It never
+// removes or reorders existing entries and never writes the file: callers
+// persist explicitly through SaveAgentConfig.
+//
+// Trade-off: a built-in agent deleted in Settings reappears on the next load,
+// because the default list is treated as authoritative for built-ins. Agents
+// the user added themselves are never touched.
+func mergeBuiltins(cfg *AgentConfigFile) *AgentConfigFile {
+	present := make(map[string]bool, len(cfg.Agents))
+	for _, a := range cfg.Agents {
+		present[a.Key] = true
+	}
+	for _, def := range DefaultAgentConfig().Agents {
+		if present[def.Key] {
+			continue
+		}
+		cfg.Agents = append(cfg.Agents, def)
+		present[def.Key] = true
+	}
+	return cfg
 }
 
 // SaveAgentConfig writes the agent config to ~/.aimanager/agents.json.

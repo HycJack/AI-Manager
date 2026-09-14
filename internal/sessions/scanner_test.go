@@ -264,17 +264,18 @@ func TestFor_DispatchesByFormat(t *testing.T) {
 		// JSONL per-project
 		{agents.AgentClaudeCode, "jsonl"},
 		{agents.AgentCodex, "jsonl"},
+		{agents.AgentPi, "jsonl"},
 
 		// JSON flat
 		{agents.AgentGemini, "json"},
 		{agents.AgentContinue, "json"},
 		{agents.AgentKiro, "json"},
 
-		// SQLite global → no-op (T19)
-		{agents.AgentOpenCode, "noop"},
-		{agents.AgentWindsurf, "noop"},
-		{agents.AgentOpenClaw, "noop"},
-		{agents.AgentGoose, "noop"},
+		// SQLite global
+		{agents.AgentOpenCode, "sqlite"},
+		{agents.AgentWindsurf, "sqlite"},
+		{agents.AgentOpenClaw, "sqlite"},
+		{agents.AgentGoose, "sqlite"},
 
 		// VS Code storage → no-op (T19). Roo Code has an empty
 		// SessionRootPath so SupportsSession() is false → nil.
@@ -287,7 +288,6 @@ func TestFor_DispatchesByFormat(t *testing.T) {
 		{agents.AgentAmp, "nil"},
 		{agents.AgentAntigravity, "nil"},
 		{agents.AgentUniversal, "nil"},
-		{agents.AgentPi, "nil"},
 		{agents.AgentGrok, "nil"},
 		{agents.AgentDroid, "nil"},
 		{agents.AgentHermes, "nil"},
@@ -411,6 +411,8 @@ func scannerKind(s SessionScanner) string {
 		return "jsonl"
 	case *jsonScanner:
 		return "json"
+	case *sqliteScanner:
+		return "sqlite"
 	case *noopScanner:
 		return "noop"
 	default:

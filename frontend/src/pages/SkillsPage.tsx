@@ -4,6 +4,7 @@ import {
   Trash2,
   FolderOpen,
   Package,
+  Layers,
   X,
   Loader2,
   RefreshCw,
@@ -49,6 +50,10 @@ interface AgentIconConfig {
 // Maps iconType string from backend config to a React component.
 function renderAgentIcon(iconType: string): React.ReactNode {
   switch (iconType) {
+    // Universal: the shared .agents/skills directory consumed by many
+    // agents. Uses the same neutral layered mark as AGENT_META.
+    case "universal":
+      return <Layers className="h-3.5 w-3.5" />;
     case "claude":
       return (
         <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor">

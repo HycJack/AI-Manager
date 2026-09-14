@@ -42,3 +42,11 @@ bin/
 .task/
 *.DS_Store
 .gopath/
+
+# `go build .` emits the desktop binary into the repo root. It was committed
+# once by mistake (16 MB); untrack it with `git rm --cached ai-manager`.
+/ai-manager
+
+# Go build cache pinned into the tree when building outside the sandbox
+.gocache/
+.gotmp/

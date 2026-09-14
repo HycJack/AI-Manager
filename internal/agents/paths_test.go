@@ -194,7 +194,7 @@ func TestDefaultAgentPaths_NotSupportedAgents(t *testing.T) {
 	paths := DefaultAgentPaths()
 
 	for _, kind := range []AgentKind{
-		AgentUniversal, AgentPi, AgentGrok, AgentDroid, AgentHermes, AgentCcSwitch,
+		AgentUniversal, AgentGrok, AgentDroid, AgentHermes, AgentCcSwitch,
 	} {
 		p, ok := paths[kind]
 		if !ok {
@@ -206,6 +206,32 @@ func TestDefaultAgentPaths_NotSupportedAgents(t *testing.T) {
 		if p.SupportsProvider() || p.SupportsSession() || p.SupportsMemory() {
 			t.Errorf("Agent %q should not support any feature", kind)
 		}
+	}
+}
+
+// TestDefaultAgentPaths_Pi is the inverse of the case above. Pi was promoted
+// out of the not-supported set once its on-disk layout was documented, so pin
+// its verified status and paths here to stop it silently drifting back.
+func TestDefaultAgentPaths_Pi(t *testing.T) {
+	p, ok := DefaultAgentPaths()[AgentPi]
+	if !ok {
+		t.Fatal("DefaultAgentPaths() missing entry for pi")
+	}
+	if p.Status != PathStatusVerified {
+		t.Errorf("Status for pi = %q, want %q", p.Status, PathStatusVerified)
+	}
+	if p.ProviderConfigPath != "{home}/.pi/agent/settings.json" {
+		t.Errorf("pi provider path = %q, want {home}/.pi/agent/settings.json", p.ProviderConfigPath)
+	}
+	if p.SessionRootPath != "{home}/.pi/agent/sessions" {
+		t.Errorf("pi session path = %q, want {home}/.pi/agent/sessions", p.SessionRootPath)
+	}
+	if !p.SupportsProvider() || !p.SupportsSession() {
+		t.Errorf("pi should support provider and session, got provider=%v session=%v",
+			p.SupportsProvider(), p.SupportsSession())
+	}
+	if p.SupportsMemory() {
+		t.Error("pi should not support memory")
 	}
 }
 
