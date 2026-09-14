@@ -82,6 +82,38 @@ export class AgentInfo {
 }
 
 /**
+ * AvailableSkill is one installable skill found in a source repository.
+ */
+export class AvailableSkill {
+    "slug": string;
+    "name": string;
+    "group": string;
+
+    /** Creates a new AvailableSkill instance. */
+    constructor($$source: Partial<AvailableSkill> = {}) {
+        if (!("slug" in $$source)) {
+            this["slug"] = "";
+        }
+        if (!("name" in $$source)) {
+            this["name"] = "";
+        }
+        if (!("group" in $$source)) {
+            this["group"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new AvailableSkill instance from a string or object.
+     */
+    static createFrom($$source: any = {}): AvailableSkill {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new AvailableSkill($$parsedSource as Partial<AvailableSkill>);
+    }
+}
+
+/**
  * ConfigInfo is the subset of config fields exposed to the frontend.
  */
 export class ConfigInfo {
@@ -330,6 +362,86 @@ export class Group {
             $$parsedSource["skills"] = $$createField2_0($$parsedSource["skills"]);
         }
         return new Group($$parsedSource as Partial<Group>);
+    }
+}
+
+/**
+ * PopularSkill is one row of the skills.sh install leaderboard.
+ */
+export class PopularSkill {
+    "rank": number;
+
+    /**
+     * skills.sh skillId; also the install slug
+     */
+    "key": string;
+    "name": string;
+
+    /**
+     * "owner/repo"
+     */
+    "source": string;
+    "repoOwner": string;
+    "repoName": string;
+
+    /**
+     * https://github.com/owner/repo
+     */
+    "githubUrl": string;
+
+    /**
+     * lifetime installs
+     */
+    "installs": number;
+
+    /**
+     * installs summed over the last 8 weeks
+     */
+    "weeklyActivity": number;
+    "isOfficial": boolean;
+
+    /** Creates a new PopularSkill instance. */
+    constructor($$source: Partial<PopularSkill> = {}) {
+        if (!("rank" in $$source)) {
+            this["rank"] = 0;
+        }
+        if (!("key" in $$source)) {
+            this["key"] = "";
+        }
+        if (!("name" in $$source)) {
+            this["name"] = "";
+        }
+        if (!("source" in $$source)) {
+            this["source"] = "";
+        }
+        if (!("repoOwner" in $$source)) {
+            this["repoOwner"] = "";
+        }
+        if (!("repoName" in $$source)) {
+            this["repoName"] = "";
+        }
+        if (!("githubUrl" in $$source)) {
+            this["githubUrl"] = "";
+        }
+        if (!("installs" in $$source)) {
+            this["installs"] = 0;
+        }
+        if (!("weeklyActivity" in $$source)) {
+            this["weeklyActivity"] = 0;
+        }
+        if (!("isOfficial" in $$source)) {
+            this["isOfficial"] = false;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new PopularSkill instance from a string or object.
+     */
+    static createFrom($$source: any = {}): PopularSkill {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new PopularSkill($$parsedSource as Partial<PopularSkill>);
     }
 }
 

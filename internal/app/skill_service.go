@@ -1,6 +1,7 @@
 package app
 
 import (
+	"cmp"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -10,6 +11,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -42,6 +44,10 @@ type SkillService struct {
 	mu       sync.Mutex
 	library  *skill.Library
 	skillUpdates map[string]bool // slug -> hasUpdate
+
+	popularMu    sync.Mutex
+	popularCache []skillsShLeaderboardSkill
+	popularAt    time.Time
 }
 
 // NewSkillService creates the skill service. The library is lazily
@@ -656,11 +662,10 @@ func (s *SkillService) GetSkillAgentStatus() ([]SkillAgentStatus, error) {
 			continue
 		}
 
-		// Use entry.Path if available, otherwise fall back to library skills dir
-		sourceDir := entry.Path
-		if sourceDir == "" {
-			sourceDir = filepath.Join(lib.SkillDir(), entry.Slug)
-		}
+		// Resolve the on-disk source dir. Registry paths are absolute and can
+		// go stale after the library root moves, so SkillSourceDir falls back
+		// to the library's own skills directory.
+		sourceDir := lib.SkillSourceDir(entry.Path, entry.Slug)
 
 		agentStatus := make(map[string]bool)
 		for _, agent := range cfg.Agents {
@@ -732,11 +737,9 @@ func (s *SkillService) ToggleSkillAgent(skillName string, agentKey string) (bool
 		return false, fmt.Errorf("skill %q not found", skillName)
 	}
 
-	// Use entry.Path if available, otherwise fall back to library skills dir
-	sourceDir := entry.Path
-	if sourceDir == "" {
-		sourceDir = filepath.Join(lib.SkillDir(), entry.Slug)
-	}
+	// Resolve the on-disk source dir; registry paths can be stale after the
+	// library root moves, so SkillSourceDir falls back to the library dir.
+	sourceDir := lib.SkillSourceDir(entry.Path, entry.Slug)
 	if _, err := os.Stat(sourceDir); err != nil {
 		return false, fmt.Errorf("skill source not found: %s", sourceDir)
 	}
@@ -875,6 +878,244 @@ func (s *SkillService) SearchSkillsSh(query string, limit, offset int) (*SkillsS
 	}
 
 	return results, nil
+}
+
+// AvailableSkill is one installable skill found in a source repository.
+type AvailableSkill struct {
+	Slug  string `json:"slug"`
+	Name  string `json:"name"`
+	Group string `json:"group"`
+}
+
+// ListRepoSkills reports the skills a repository can provide. Discovery hits
+// only carry a repository, which may ship several skills, so the caller needs
+// the slug list before it can pick one with AddSkill.
+func (s *SkillService) ListRepoSkills(repo string) ([]AvailableSkill, error) {
+	repo = strings.TrimSpace(repo)
+	if repo == "" {
+		return nil, fmt.Errorf("empty repository")
+	}
+	lib, err := s.lib()
+	if err != nil {
+		return nil, err
+	}
+	records, err := lib.ScanNpx(repo)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]AvailableSkill, 0, len(records))
+	for _, r := range records {
+		out = append(out, AvailableSkill{Slug: r.Slug, Name: r.Name, Group: r.Group})
+	}
+	return out, nil
+}
+
+// PopularSkill is one row of the skills.sh install leaderboard.
+type PopularSkill struct {
+	Rank           int    `json:"rank"`
+	Key            string `json:"key"` // skills.sh skillId; also the install slug
+	Name           string `json:"name"`
+	Source         string `json:"source"` // "owner/repo"
+	RepoOwner      string `json:"repoOwner"`
+	RepoName       string `json:"repoName"`
+	GithubURL      string `json:"githubUrl"`      // https://github.com/owner/repo
+	Installs       int    `json:"installs"`       // lifetime installs
+	WeeklyActivity int    `json:"weeklyActivity"` // installs summed over the last 8 weeks
+	IsOfficial     bool   `json:"isOfficial"`
+}
+
+const (
+	skillsShHomeURL        = "https://skills.sh/"
+	skillsShLeaderboardKey = `\"initialSkills\":[`
+	popularCacheTTL        = time.Hour
+)
+
+// skillsShLeaderboardSkill is one entry of the leaderboard embedded in the
+// skills.sh homepage.
+type skillsShLeaderboardSkill struct {
+	Source         string `json:"source"`
+	SkillID        string `json:"skillId"`
+	Name           string `json:"name"`
+	Installs       int    `json:"installs"`
+	WeeklyInstalls []int  `json:"weeklyInstalls"`
+	IsOfficial     bool   `json:"isOfficial"`
+}
+
+// PopularSkillsSh returns the most-installed skills on skills.sh, capped at
+// limit rows. The data comes from the leaderboard embedded in the homepage
+// because the search API rejects queries shorter than two characters and has
+// no trending endpoint.
+func (s *SkillService) PopularSkillsSh(limit int) ([]PopularSkill, error) {
+	if limit <= 0 {
+		limit = 20
+	}
+	if limit > 100 {
+		limit = 100
+	}
+
+	skills, err := s.skillsShLeaderboard()
+	if err != nil {
+		return nil, err
+	}
+	return rankPopularSkills(skills, limit), nil
+}
+
+// rankPopularSkills turns raw leaderboard entries into ranked rows: sorted by
+// installs, deduplicated by skillId, capped at limit. Split out from
+// PopularSkillsSh so the ranking can be tested without a network call.
+func rankPopularSkills(skills []skillsShLeaderboardSkill, limit int) []PopularSkill {
+	slices.SortStableFunc(skills, func(a, b skillsShLeaderboardSkill) int {
+		return cmp.Compare(b.Installs, a.Installs)
+	})
+
+	out := make([]PopularSkill, 0, limit)
+	seen := make(map[string]bool, limit)
+	for _, sk := range skills {
+		if len(out) >= limit {
+			break
+		}
+		parts := strings.SplitN(sk.Source, "/", 2)
+		if len(parts) != 2 || sk.SkillID == "" || seen[sk.SkillID] {
+			continue
+		}
+		seen[sk.SkillID] = true
+
+		var weekly int
+		for _, n := range sk.WeeklyInstalls {
+			weekly += n
+		}
+
+		out = append(out, PopularSkill{
+			Rank:           len(out) + 1,
+			Key:            sk.SkillID,
+			Name:           sk.Name,
+			Source:         sk.Source,
+			RepoOwner:      parts[0],
+			RepoName:       parts[1],
+			GithubURL:      "https://github.com/" + sk.Source,
+			Installs:       sk.Installs,
+			WeeklyActivity: weekly,
+			IsOfficial:     sk.IsOfficial,
+		})
+	}
+	return out
+}
+
+// skillsShLeaderboard fetches and parses the leaderboard, keeping the result
+// for an hour. The homepage is about 940 KB and the numbers move slowly, so
+// re-downloading it on every dialog open would be wasteful.
+func (s *SkillService) skillsShLeaderboard() ([]skillsShLeaderboardSkill, error) {
+	s.popularMu.Lock()
+	if s.popularCache != nil && time.Since(s.popularAt) < popularCacheTTL {
+		cached := s.popularCache
+		s.popularMu.Unlock()
+		return cached, nil
+	}
+	s.popularMu.Unlock()
+
+	client := &http.Client{Timeout: 20 * time.Second}
+	resp, err := client.Get(skillsShHomeURL)
+	if err != nil {
+		return nil, fmt.Errorf("fetch skills.sh: %w", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("skills.sh returned %d", resp.StatusCode)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("read skills.sh response: %w", err)
+	}
+	skills, err := extractSkillsShLeaderboard(string(body))
+	if err != nil {
+		return nil, err
+	}
+	if len(skills) == 0 {
+		return nil, fmt.Errorf("skills.sh leaderboard is empty")
+	}
+
+	s.popularMu.Lock()
+	s.popularCache = skills
+	s.popularAt = time.Now()
+	s.popularMu.Unlock()
+	return skills, nil
+}
+
+// extractSkillsShLeaderboard pulls the leaderboard array out of the skills.sh
+// homepage. Next.js ships the data inside an escaped RSC script string, so in
+// the raw HTML it arrives as \"initialSkills\":[{...}]. Recover that JS
+// string, JSON-decode it back to the plain chunk, and let the real JSON parser
+// read the array:
+//
+//	<script>self.__next_f.push([1,"4e:[\"$\",...,null,{\"initialSkills\":[...]}]")</script>
+func extractSkillsShLeaderboard(html string) ([]skillsShLeaderboardSkill, error) {
+	keyIdx := strings.Index(html, skillsShLeaderboardKey)
+	if keyIdx < 0 {
+		return nil, fmt.Errorf("skills.sh leaderboard not found in homepage")
+	}
+
+	chunk, err := decodeRSCString(html, keyIdx)
+	if err != nil {
+		return nil, err
+	}
+
+	const field = `"initialSkills":`
+	start := strings.Index(chunk, field)
+	if start < 0 {
+		return nil, fmt.Errorf("skills.sh leaderboard field missing from homepage")
+	}
+
+	var skills []skillsShLeaderboardSkill
+	if err := json.NewDecoder(strings.NewReader(chunk[start+len(field):])).Decode(&skills); err != nil {
+		return nil, fmt.Errorf("decode skills.sh leaderboard: %w", err)
+	}
+	return skills, nil
+}
+
+// decodeRSCString recovers the JS string literal that straddles keyIdx. Every
+// quote in the payload is escaped, so a quote preceded by an even number of
+// backslashes is the string delimiter while an odd number means the quote
+// belongs to the payload.
+func decodeRSCString(html string, keyIdx int) (string, error) {
+	open := -1
+	for i := keyIdx - 1; i >= 0; i-- {
+		if html[i] != '"' {
+			continue
+		}
+		backslashes := 0
+		for j := i - 1; j >= 0 && html[j] == '\\'; j-- {
+			backslashes++
+		}
+		if backslashes%2 == 0 {
+			open = i
+			break
+		}
+	}
+	if open < 0 {
+		return "", fmt.Errorf("skills.sh leaderboard string start not found")
+	}
+
+	end := -1
+	for i := keyIdx; i < len(html); i++ {
+		if html[i] == '\\' {
+			i++ // skip the escaped character
+			continue
+		}
+		if html[i] == '"' {
+			end = i
+			break
+		}
+	}
+	if end < 0 || end <= open {
+		return "", fmt.Errorf("skills.sh leaderboard string end not found")
+	}
+
+	var chunk string
+	if err := json.Unmarshal([]byte(`"`+html[open+1:end]+`"`), &chunk); err != nil {
+		return "", fmt.Errorf("decode skills.sh RSC chunk: %w", err)
+	}
+	return chunk, nil
 }
 
 // GitHubSearchResult is the result of searching GitHub for skill repositories.

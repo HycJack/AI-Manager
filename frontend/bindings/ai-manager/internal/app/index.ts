@@ -28,6 +28,7 @@ export {
 
 export {
     AgentInfo,
+    AvailableSkill,
     ConfigInfo,
     ConfigUpdate,
     CustomAgentPaths,
@@ -35,6 +36,7 @@ export {
     ExternalSkill,
     GitHubSearchResult,
     Group,
+    PopularSkill,
     Preferences,
     SearchOptions,
     SearchResult,

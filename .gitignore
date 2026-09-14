@@ -50,3 +50,4 @@ bin/
 # Go build cache pinned into the tree when building outside the sandbox
 .gocache/
 .gotmp/
+.npmcache/

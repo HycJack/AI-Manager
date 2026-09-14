@@ -112,11 +112,22 @@ export function GetSkillAgentStatus(): $CancellablePromise<$models.SkillAgentSta
 }
 
 /**
+ * ListRepoSkills reports the skills a repository can provide. Discovery hits
+ * only carry a repository, which may ship several skills, so the caller needs
+ * the slug list before it can pick one with AddSkill.
+ */
+export function ListRepoSkills(repo: string): $CancellablePromise<$models.AvailableSkill[]> {
+    return $Call.ByID(2464534885, repo).then(($result: any) => {
+        return $$createType12($result);
+    });
+}
+
+/**
  * ListSkills returns all skills in the library as Summaries.
  */
 export function ListSkills(): $CancellablePromise<skill$0.Summary[]> {
     return $Call.ByID(3187451021).then(($result: any) => {
-        return $$createType12($result);
+        return $$createType14($result);
     });
 }
 
@@ -135,6 +146,18 @@ export function OpenEffectiveSkillDirectory(canonicalPath: string): $Cancellable
  */
 export function OpenSkillDirectory(name: string): $CancellablePromise<void> {
     return $Call.ByID(3546847379, name);
+}
+
+/**
+ * PopularSkillsSh returns the most-installed skills on skills.sh, capped at
+ * limit rows. The data comes from the leaderboard embedded in the homepage
+ * because the search API rejects queries shorter than two characters and has
+ * no trending endpoint.
+ */
+export function PopularSkillsSh(limit: number): $CancellablePromise<$models.PopularSkill[]> {
+    return $Call.ByID(2934435581, limit).then(($result: any) => {
+        return $$createType16($result);
+    });
 }
 
 /**
@@ -166,7 +189,7 @@ export function SaveAgentConfig(cfg: agents$0.AgentConfigFile | null): $Cancella
  */
 export function ScanSkill(kind: string, input: string): $CancellablePromise<$models.SkillSummary[]> {
     return $Call.ByID(4292178559, kind, input).then(($result: any) => {
-        return $$createType14($result);
+        return $$createType18($result);
     });
 }
 
@@ -175,7 +198,7 @@ export function ScanSkill(kind: string, input: string): $CancellablePromise<$mod
  */
 export function SearchGitHubSkills(query: string): $CancellablePromise<$models.GitHubSearchResult | null> {
     return $Call.ByID(892326790, query).then(($result: any) => {
-        return $$createType16($result);
+        return $$createType20($result);
     });
 }
 
@@ -184,7 +207,7 @@ export function SearchGitHubSkills(query: string): $CancellablePromise<$models.G
  */
 export function SearchSkillsSh(query: string, limit: number, offset: number): $CancellablePromise<$models.SkillsShSearchResult | null> {
     return $Call.ByID(1243972398, query, limit, offset).then(($result: any) => {
-        return $$createType18($result);
+        return $$createType22($result);
     });
 }
 
@@ -235,11 +258,15 @@ const $$createType7 = $Create.Array($$createType6);
 const $$createType8 = $models.SkillDetail.createFrom;
 const $$createType9 = $models.SkillAgentStatus.createFrom;
 const $$createType10 = $Create.Array($$createType9);
-const $$createType11 = skill$0.Summary.createFrom;
+const $$createType11 = $models.AvailableSkill.createFrom;
 const $$createType12 = $Create.Array($$createType11);
-const $$createType13 = $models.SkillSummary.createFrom;
+const $$createType13 = skill$0.Summary.createFrom;
 const $$createType14 = $Create.Array($$createType13);
-const $$createType15 = $models.GitHubSearchResult.createFrom;
-const $$createType16 = $Create.Nullable($$createType15);
-const $$createType17 = $models.SkillsShSearchResult.createFrom;
-const $$createType18 = $Create.Nullable($$createType17);
+const $$createType15 = $models.PopularSkill.createFrom;
+const $$createType16 = $Create.Array($$createType15);
+const $$createType17 = $models.SkillSummary.createFrom;
+const $$createType18 = $Create.Array($$createType17);
+const $$createType19 = $models.GitHubSearchResult.createFrom;
+const $$createType20 = $Create.Nullable($$createType19);
+const $$createType21 = $models.SkillsShSearchResult.createFrom;
+const $$createType22 = $Create.Nullable($$createType21);
