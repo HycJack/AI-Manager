@@ -173,6 +173,13 @@ func (s *SkillService) ScanSkill(kind, input string) ([]SkillSummary, error) {
 	return summaries, nil
 }
 
+// isGitHubRef reports whether a package ref looks like owner/repo or
+// owner/repo/subdir, i.e. something that needs cloning rather than a lookup.
+func isGitHubRef(ref string) bool {
+	parts := strings.Split(strings.TrimSpace(ref), "/")
+	return len(parts) == 2 || len(parts) == 3
+}
+
 // AddSkill adds selected skills to the library. The selectedSlugs parameter
 // contains the slugs of skills to add (from a prior ScanSkill call). If empty,
 // all scanned skills are added.
@@ -188,6 +195,14 @@ func (s *SkillService) AddSkill(kind, input, groupName string, selectedSlugs []s
 	case "local":
 		records, err = lib.ScanLocal(input)
 	case "npx":
+		// owner/repo is a clone-and-install, not a scan: the checkout has to
+		// stay on disk until AddRecord copies the skill files out of it.
+		if isGitHubRef(input) {
+			if _, err := lib.InstallFromRepo(input, groupName, selectedSlugs); err != nil {
+				return err
+			}
+			return nil
+		}
 		records, err = lib.ScanNpx(input)
 	case "claude":
 		records, err = lib.ScanClaude(input)

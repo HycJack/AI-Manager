@@ -54,7 +54,6 @@ export function DiscoverSkillsDialog({ open, onClose, onInstalled }: DiscoverSki
   const [adding, setAdding] = useState(false);
   const [popular, setPopular] = useState<PopularSkill[] | null>(null);
   const [popularLoading, setPopularLoading] = useState(false);
-  const [addingKey, setAddingKey] = useState<string | null>(null);
   // A row that opened the "which skills does this repo ship" picker.
   const [installSource, setInstallSource] = useState<{ source: string; skillKey: string } | null>(null);
 
@@ -110,22 +109,6 @@ export function DiscoverSkillsDialog({ open, onClose, onInstalled }: DiscoverSki
       toast(String(e), true);
     } finally {
       setAdding(false);
-    }
-  };
-
-  // Leaderboard rows install the same way the npx flow does: the source is
-  // "owner/repo", which the library clones and scans.
-  const handleAddRemote = async (p: PopularSkill) => {
-    setAddingKey(p.key);
-    try {
-      await AddSkill("npx", p.source, "", []);
-      toast(t("skills.added"));
-      onInstalled();
-      onClose();
-    } catch (e) {
-      toast(String(e), true);
-    } finally {
-      setAddingKey(null);
     }
   };
 
@@ -385,16 +368,11 @@ export function DiscoverSkillsDialog({ open, onClose, onInstalled }: DiscoverSki
                         </Button>
                         <Button
                           size="sm"
-                          className="shrink-0"
-                          disabled={addingKey !== null}
-                          onClick={() => handleAddRemote(p)}
+                          className={cn("shrink-0", installSource?.source === p.source && "border-primary bg-primary/10")}
+                          onClick={() => setInstallSource({ source: p.source, skillKey: p.key })}
                         >
-                          {addingKey === p.key ? (
-                            <Loader2 className="mr-1 h-4 w-4 animate-spin" />
-                          ) : (
-                            <Plus className="mr-1 h-4 w-4" />
-                          )}
-                          {addingKey === p.key ? t("skills.adding") : t("skills.add")}
+                          <Download className="mr-1 h-4 w-4" />
+                          {t("skills.add")}
                         </Button>
                       </div>
                     ))}

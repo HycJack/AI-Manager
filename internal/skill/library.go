@@ -139,19 +139,30 @@ func (l *Library) ScanLocal(root string) ([]Record, error) {
 }
 
 // makeRecordFromDir builds a SkillRecord from a directory that contains a
-// SKILL.md file. It tries to load metadata.json for additional fields.
+// SKILL.md file.
 func (l *Library) makeRecordFromDir(path string) Record {
-	name := filepath.Base(path)
-	slug := slugify(name)
+	dirName := filepath.Base(path)
+	slug := slugify(dirName)
 
 	rec := Record{
-		ID:        hashString(name),
-		Name:      titleCase(name),
+		ID:        hashString(dirName),
+		Name:      titleCase(dirName),
 		Slug:      slug,
 		Version:   "1.0.0",
 		Origin:    Origin{Type: OriginLocal, Path: path},
 		Installed: true,
 		UpdatedAt: time.Now().UTC(),
+	}
+
+	// SKILL.md frontmatter holds the canonical name and description. The
+	// directory name is only a fallback: deriving it with titleCase mangles
+	// real names, turning "swiftui-pro" into "Swiftui Pro".
+	fm := parseSkillFrontmatter(path)
+	if n := fm["name"]; n != "" {
+		rec.Name = n
+	}
+	if d := fm["description"]; d != "" {
+		rec.Description = d
 	}
 
 	if meta, err := LoadMetadata(path); err == nil {
@@ -167,9 +178,9 @@ func (l *Library) makeRecordFromDir(path string) Record {
 		}
 	}
 
-	// Fallback: try to parse version from SKILL.md frontmatter.
+	// Version falls back to SKILL.md frontmatter when metadata.json has none.
 	if rec.Version == "1.0.0" {
-		if v := parseSkillFrontmatterVersion(path); v != "" {
+		if v := fm["version"]; v != "" {
 			rec.Version = v
 		}
 	}
@@ -218,44 +229,154 @@ func (l *Library) ScanNpx(packageName string) ([]Record, error) {
 	}
 }
 
-// cloneAndScanGitHub clones a GitHub repo to a temp dir and scans for skills.
-func (l *Library) cloneAndScanGitHub(repo, subdir string) ([]Record, error) {
+// cloneRef clones cloneURL into a fresh temp dir named after repoName and
+// returns that dir together with the path to scan. When subdir is set the
+// checkout is validated and the subdir is returned instead.
+//
+// The caller owns the temp dir and must remove it with os.RemoveAll. Ownership
+// is pushed to the caller because AddRecord has to copy the skill files out of
+// the checkout: deleting it here would leave the install with metadata.json
+// and nothing else.
+func cloneRef(cloneURL, repoName, subdir string) (string, string, error) {
+	repoName = strings.TrimSpace(repoName)
+	if repoName == "" {
+		return "", "", fmt.Errorf("empty repository")
+	}
+
 	tmpDir, err := os.MkdirTemp("", "ai-manager-clone-")
 	if err != nil {
-		return nil, fmt.Errorf("create temp dir: %w", err)
+		return "", "", fmt.Errorf("create temp dir: %w", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	// Name the checkout after the repository. A repo whose root is itself a
+	// skill directory would otherwise be registered as a skill named "repo".
+	cloneDir := filepath.Join(tmpDir, filepath.Base(repoName))
 
-	cloneDir := filepath.Join(tmpDir, "repo")
-	cmd := exec.Command("git", "clone", "--depth", "1",
-		fmt.Sprintf("https://github.com/%s.git", repo), cloneDir)
+	cmd := exec.Command("git", "clone", "--depth", "1", cloneURL, cloneDir)
 	if out, err := cmd.CombinedOutput(); err != nil {
-		return nil, fmt.Errorf("git clone %s: %w\n%s", repo, err, string(out))
+		os.RemoveAll(tmpDir)
+		return "", "", fmt.Errorf("git clone %s: %w\n%s", repoName, err, string(out))
 	}
 
-	// If a subdirectory is specified, scan that; otherwise scan the repo root
 	scanPath := cloneDir
 	if subdir != "" {
 		scanPath = filepath.Join(cloneDir, subdir)
 		if _, err := os.Stat(scanPath); err != nil {
-			return nil, fmt.Errorf("subdirectory %q not found in %s", subdir, repo)
+			os.RemoveAll(tmpDir)
+			return "", "", fmt.Errorf("subdirectory %q not found in %s", subdir, repoName)
 		}
 	}
+	return tmpDir, scanPath, nil
+}
+
+// cloneGitHubRepo clones a GitHub repository into a temp dir.
+func cloneGitHubRepo(repo, subdir string) (string, string, error) {
+	repo = strings.TrimSpace(repo)
+	if repo == "" {
+		return "", "", fmt.Errorf("empty repository")
+	}
+	return cloneRef("https://github.com/"+repo+".git", repo, subdir)
+}
+
+// cloneAndScanGitHub reports the skills a GitHub repo ships. This is a
+// read-only probe: the checkout is discarded before returning, so the records
+// must not be relied on for on-disk files. Use InstallFromRepo to install.
+func (l *Library) cloneAndScanGitHub(repo, subdir string) ([]Record, error) {
+	tmpDir, scanPath, err := cloneGitHubRepo(repo, subdir)
+	if err != nil {
+		return nil, err
+	}
+	defer os.RemoveAll(tmpDir)
 
 	records, err := l.ScanLocal(scanPath)
 	if err != nil {
 		return nil, fmt.Errorf("scan cloned repo %s: %w", repo, err)
 	}
 
-	// Tag each record with its GitHub origin
+	// Tag each record with its GitHub origin, keeping Origin.Path so the
+	// skill's real location is not lost.
 	for i := range records {
-		records[i].Origin = Origin{Type: OriginGitHub, Repo: repo, Subdir: subdir}
+		records[i].Origin.Type = OriginGitHub
+		records[i].Origin.Repo = repo
+		records[i].Origin.Subdir = subdir
 	}
 
 	if len(records) == 0 {
 		return nil, fmt.Errorf("no skills found in %s", repo)
 	}
 	return records, nil
+}
+
+// InstallFromRepo clones a GitHub repository and installs its skills into the
+// library, copying the skill files over. selectedSlugs is matched against
+// record slugs; an empty slice installs everything. The checkout is deleted
+// only after every AddRecord has copied its files out of it.
+func (l *Library) InstallFromRepo(repo, groupName string, selectedSlugs []string) ([]Summary, error) {
+	repo = strings.TrimSpace(repo)
+	parts := strings.Split(repo, "/")
+	if len(parts) < 2 || len(parts) > 3 {
+		return nil, fmt.Errorf("expected owner/repo[/subdir], got %q", repo)
+	}
+	name := parts[0] + "/" + parts[1]
+	subdir := ""
+	if len(parts) == 3 {
+		subdir = parts[2]
+	}
+	return l.installFromURL("https://github.com/"+name+".git", name, subdir, groupName, selectedSlugs)
+}
+
+// installFromURL does the clone-scan-copy work for an arbitrary git URL. It is
+// split out of InstallFromRepo so the install path can be exercised with a
+// local repository in tests.
+func (l *Library) installFromURL(cloneURL, repo, subdir, groupName string, selectedSlugs []string) ([]Summary, error) {
+	tmpDir, scanPath, err := cloneRef(cloneURL, repo, subdir)
+	if err != nil {
+		return nil, err
+	}
+	defer os.RemoveAll(tmpDir)
+
+	records, err := l.ScanLocal(scanPath)
+	if err != nil {
+		return nil, fmt.Errorf("scan cloned repo %s: %w", repo, err)
+	}
+	if len(records) == 0 {
+		return nil, fmt.Errorf("no skills found in %s", repo)
+	}
+
+	if len(selectedSlugs) > 0 {
+		selected := make(map[string]bool, len(selectedSlugs))
+		for _, slug := range selectedSlugs {
+			selected[strings.TrimSpace(slug)] = true
+		}
+		filtered := make([]Record, 0, len(records))
+		for _, rec := range records {
+			if selected[rec.Slug] {
+				filtered = append(filtered, rec)
+			}
+		}
+		records = filtered
+	}
+	if len(records) == 0 {
+		return nil, fmt.Errorf("no matching skills to install from %s", repo)
+	}
+
+	installed := make([]Summary, 0, len(records))
+	for i := range records {
+		rec := records[i]
+		rec.Origin.Type = OriginGitHub
+		rec.Origin.Repo = repo
+		rec.Origin.Subdir = subdir
+		rec.Group = groupName
+		if err := l.AddRecord(rec); err != nil {
+			if strings.Contains(err.Error(), "already exists in library") {
+				continue // keep going: one duplicate should not fail the batch
+			}
+			return nil, err
+		}
+		sum := rec.NewSummary()
+		sum.Installed = true
+		installed = append(installed, sum)
+	}
+	return installed, nil
 }
 
 // ScanClaude resolves a Claude plugin path to SkillRecords.
