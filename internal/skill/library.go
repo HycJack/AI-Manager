@@ -471,6 +471,14 @@ func (l *Library) AddRecord(rec Record) error {
 // level (the library writes its own). Returns an error if any file cannot
 // be copied.
 func copyDirContents(src, dst string) error {
+	return copyDirContentsDepth(src, dst, 0)
+}
+
+// maxSymlinkDepth bounds how deep symlinked directories are followed, so a
+// cyclic link cannot recurse forever.
+const maxSymlinkDepth = 16
+
+func copyDirContentsDepth(src, dst string, depth int) error {
 	return filepath.WalkDir(src, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
 			return err
@@ -487,29 +495,66 @@ func copyDirContents(src, dst string) error {
 			return nil
 		}
 		dstPath := filepath.Join(dst, rel)
+
+		// Dereference symlinks so the library stays self-contained: a symlinked
+		// directory is copied as a real directory, a symlinked file as a real
+		// file. Copying the link itself would leave the installed skill pointing
+		// outside the library. Skill repos use symlinks a lot (a shared
+		// references/ reused by several skills), so failing on one would break
+		// the whole install.
+		if d.Type()&os.ModeSymlink != 0 {
+			if depth >= maxSymlinkDepth {
+				return nil // cyclic link: stop rather than recurse forever
+			}
+			target, err := os.Stat(path) // follows symlinks
+			if err != nil {
+				return nil // broken link: skip it
+			}
+			if target.IsDir() {
+				if err := os.MkdirAll(dstPath, 0o755); err != nil {
+					return fmt.Errorf("create dir %s: %w", dstPath, err)
+				}
+				// Resolve the link before walking: WalkDir reports paths
+				// relative to the resolved root, so walking the link itself
+				// would make filepath.Rel escape the destination.
+				real, err := filepath.EvalSymlinks(path)
+				if err != nil {
+					return nil
+				}
+				// WalkDir does not descend into symlinked directories.
+				return copyDirContentsDepth(real, dstPath, depth+1)
+			}
+			return copyFileContents(path, dstPath, target.Mode())
+		}
+
 		if d.IsDir() {
 			if err := os.MkdirAll(dstPath, 0o755); err != nil {
 				return fmt.Errorf("create dir %s: %w", dstPath, err)
 			}
 			return nil
 		}
+
 		// Copy regular files
 		info, err := d.Info()
 		if err != nil {
 			return err
 		}
-		data, err := os.ReadFile(path)
-		if err != nil {
-			return fmt.Errorf("read %s: %w", path, err)
-		}
-		if err := os.MkdirAll(filepath.Dir(dstPath), 0o755); err != nil {
-			return fmt.Errorf("create parent dir: %w", err)
-		}
-		if err := os.WriteFile(dstPath, data, info.Mode()); err != nil {
-			return fmt.Errorf("write %s: %w", dstPath, err)
-		}
-		return nil
+		return copyFileContents(path, dstPath, info.Mode())
 	})
+}
+
+func copyFileContents(srcPath, dstPath string, mode os.FileMode) error {
+	data, err := os.ReadFile(srcPath)
+	if err != nil {
+		return fmt.Errorf("read %s: %w", srcPath, err)
+	}
+	if err := os.MkdirAll(filepath.Dir(dstPath), 0o755); err != nil {
+		return fmt.Errorf("create parent dir: %w", err)
+	}
+	if err := os.WriteFile(dstPath, data, mode); err != nil {
+		return fmt.Errorf("write %s: %w", dstPath, err)
+	}
+	return nil
 }
 
 // RemoveRecord removes a skill record from the library by name.
